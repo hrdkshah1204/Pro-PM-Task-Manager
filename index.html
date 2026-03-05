@@ -37,11 +37,18 @@
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
         
-        /* Tables */
+        /* Tables & Accordion */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #f1f5f9; font-weight: 600; color: #475569; font-size: 14px; }
         td { font-size: 14px; }
+        .action-btns { display: flex; gap: 8px; }
+        
+        .expand-btn { background: transparent; border: none; color: var(--primary); font-size: 16px; cursor: pointer; padding: 0; width: 24px; text-align: center; }
+        .task-details-row { background: #f8fafc; display: none; }
+        .task-details-row.open { display: table-row; }
+        .task-list { margin: 0; padding-left: 0; list-style: none; }
+        .task-list li { background: white; border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -72,7 +79,6 @@
             
             <div id="sub1" class="sub-page">
                 <h3>Create New Project</h3>
-                
                 <div class="form-row">
                     <div class="form-group" style="flex: 2;">
                         <label>Enter Project Name</label>
@@ -83,7 +89,6 @@
                         <input type="date" id="p-date">
                     </div>
                 </div>
-                
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>Enter Project Description</label>
                     <input type="text" id="p-desc" maxlength="1000" placeholder="Description details...">
@@ -95,11 +100,7 @@
                 <h3 style="margin-top: 40px;">Active Projects</h3>
                 <table>
                     <thead>
-                        <tr>
-                            <th>Project Name</th>
-                            <th>End Date</th>
-                            <th style="width: 100px;">Actions</th>
-                        </tr>
+                        <tr><th>Project Name</th><th>End Date</th><th style="width: 100px;">Actions</th></tr>
                     </thead>
                     <tbody id="project-table-body">
                         <tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading projects...</td></tr>
@@ -107,8 +108,54 @@
                 </table>
             </div>
 
-            <div id="sub2" class="sub-page hidden"><h3>Create Tasks (Coming Soon)</h3></div>
-            <div id="sub3" class="sub-page hidden"><h3>Add Teams (Coming Soon)</h3></div>
+            <div id="sub2" class="sub-page hidden">
+                <h3>Create Tasks</h3>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Select Project</label>
+                        <select id="t-project-id"><option value="">-- Loading Projects... --</option></select>
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <label>Create task</label>
+                        <input type="text" id="t-desc" maxlength="1500" placeholder="Enter task description...">
+                    </div>
+                </div>
+                
+                <button onclick="saveTask()">Save Task</button>
+                <span id="t-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
+
+                <h3 style="margin-top: 40px;">Tasks by Project</h3>
+                <table id="tasks-table">
+                    <thead><tr><th style="width: 30px;"></th><th>Project Name</th><th>Total Tasks</th></tr></thead>
+                    <tbody id="tasks-table-body"><tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading data...</td></tr></tbody>
+                </table>
+            </div>
+
+            <div id="sub3" class="sub-page hidden">
+                <h3>Add Teams</h3>
+                <p style="font-size: 13px; color: #64748b;">Create organizational groups for your workspace.</p>
+                <div class="form-row" style="align-items: flex-end;">
+                    <div class="form-group" style="flex: 3;">
+                        <label>Add New Team Name</label>
+                        <input type="text" id="team-name" maxlength="1500" placeholder="e.g., Engineering, Marketing">
+                    </div>
+                    <div style="flex: 1;">
+                        <button onclick="saveTeam()" style="width: 100%;">Save Team</button>
+                    </div>
+                </div>
+                <span id="team-status" style="margin-left: 5px; font-size: 13px; display: none;"></span>
+
+                <h3 style="margin-top: 40px;">Workspace Teams</h3>
+                <table>
+                    <thead>
+                        <tr><th>Team Name</th><th>Manage Members</th><th style="width: 100px;">Actions</th></tr>
+                    </thead>
+                    <tbody id="team-table-body">
+                        <tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading teams...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
             <div id="sub4" class="sub-page hidden"><h3>Add Members (Coming Soon)</h3></div>
             <div id="sub5" class="sub-page hidden"><h3>Assign Project (Coming Soon)</h3></div>
             <div id="sub6" class="sub-page hidden"><h3>Analytics (Coming Soon)</h3></div>
@@ -130,13 +177,17 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // Added updateDoc and where back into the imports!
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // *** PASTE YOUR FIREBASE KEYS HERE ***
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID"
+        // Your web app's Firebase configuration
+            const firebaseConfig = {
+            apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
+            authDomain: "pm-pro-80c67.firebaseapp.com",
+            projectId: "pm-pro-80c67",
+            storageBucket: "pm-pro-80c67.firebasestorage.app",
+            messagingSenderId: "553036723851",
+            appId: "1:553036723851:web:3167a4def993500c39468e"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -144,7 +195,6 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // --- AUTH & GATEKEEPER LOGIC ---
         window.signIn = () => signInWithPopup(auth, provider).catch(err => document.getElementById('auth-status').innerText = err.message);
         window.signOutUser = () => signOut(auth);
 
@@ -170,109 +220,86 @@
             }
         });
 
-        // --- SIDEBAR NAVIGATION LOGIC ---
+        // --- NAVIGATION LOGIC ---
         window.navTo = (pageId) => {
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(pageId).classList.remove('hidden');
             event.target.classList.add('active');
+
+            // Trigger table loads when navigating
+            if(pageId === 'sub2') { loadProjectDropdown(); loadTasksTable(); }
+            if(pageId === 'sub3') { loadTeamsTable(); }
         };
 
-        // --- SUB PAGE 1: CREATE PROJECT LOGIC ---
+        // --- SUB PAGE 1: CREATE PROJECT ---
         window.saveProject = async () => {
-            const name = document.getElementById('p-name').value;
+            const nameInput = document.getElementById('p-name');
+            const name = nameInput.value.trim();
             const date = document.getElementById('p-date').value;
-            const desc = document.getElementById('p-desc').value;
+            const desc = document.getElementById('p-desc').value.trim();
             const status = document.getElementById('p-status');
 
-            if (!name || !date || !desc) {
-                alert("Please fill out all project fields."); return;
-            }
+            if (!name || !date || !desc) return alert("Please fill out all project fields.");
 
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Saving...";
+            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
 
             try {
-                await addDoc(collection(db, "projects"), {
-                    name: name,
-                    endDate: date,
-                    description: desc,
-                    createdAt: new Date().toISOString()
-                });
+                // Popup Duplicate Checker for Projects
+                const dupQuery = query(collection(db, "projects"), where("name", "==", name));
+                const dupSnap = await getDocs(dupQuery);
+                
+                if (!dupSnap.empty) {
+                    status.style.display = 'none';
+                    alert(`Wait! A project with the name "${name}" already exists.\n\nPlease modify the name and try again.`);
+                    nameInput.focus();
+                    return; 
+                }
+
+                status.innerText = "Saving...";
+                await addDoc(collection(db, "projects"), { name, endDate: date, description: desc, createdAt: new Date().toISOString() });
                 
                 status.style.color = '#10b981'; status.innerText = "Saved!";
-                document.getElementById('p-name').value = '';
-                document.getElementById('p-date').value = '';
-                document.getElementById('p-desc').value = '';
+                nameInput.value = ''; document.getElementById('p-date').value = ''; document.getElementById('p-desc').value = '';
                 
                 setTimeout(() => status.style.display = 'none', 3000);
                 loadProjectsTable(); 
-            } catch (error) {
-                console.error(error);
-                status.style.color = '#ef4444'; status.innerText = "Error saving.";
-            }
+            } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
         };
 
         window.loadProjectsTable = async () => {
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading...</td></tr>';
-
             try {
                 const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
                 const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>';
-                    return;
-                }
+                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
 
                 tbody.innerHTML = '';
                 querySnapshot.forEach((docSnap) => {
                     const p = docSnap.data();
-                    const id = docSnap.id;
-                    
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight: 500;">${p.name}</td>
-                            <td>${p.endDate}</td>
-                            <td>
-                                <button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteProject('${id}')">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                    tbody.innerHTML += `<tr><td style="font-weight: 500;">${p.name}</td><td>${p.endDate}</td><td><button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteProject('${docSnap.id}')">Delete</button></td></tr>`;
                 });
             } catch (error) { console.error(error); }
         };
 
         window.deleteProject = async (id) => {
             if(confirm("Are you sure you want to delete this project? This cannot be undone.")) {
-                try {
-                    await deleteDoc(doc(db, "projects", id));
-                    loadProjectsTable();
-                } catch (error) { console.error("Error deleting:", error); }
+                try { await deleteDoc(doc(db, "projects", id)); loadProjectsTable(); } catch (error) { console.error(error); }
             }
         };
 
-    </script>
-</body>
-</html>
-        // ==========================================
-        // SUB PAGE 2: CREATE TASKS LOGIC
-        // ==========================================
-
-        // Fills the "Select Project" dropdown
+        // --- SUB PAGE 2: CREATE TASKS ---
         window.loadProjectDropdown = async () => {
             const dropdown = document.getElementById('t-project-id');
             dropdown.innerHTML = '<option value="">-- Select a Project --</option>';
             try {
                 const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
                 const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((docSnap) => {
-                    dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
-                });
+                querySnapshot.forEach((docSnap) => { dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`; });
             } catch (error) { console.error(error); }
         };
 
-        // Saves a new task linked to a project ID
         window.saveTask = async () => {
             const projectId = document.getElementById('t-project-id').value;
             const desc = document.getElementById('t-desc').value;
@@ -282,32 +309,20 @@
 
             status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Saving...";
             try {
-                await addDoc(collection(db, "tasks"), {
-                    projectId: projectId,
-                    description: desc,
-                    status: "to-do",
-                    createdAt: new Date().toISOString()
-                });
-                
+                await addDoc(collection(db, "tasks"), { projectId, description: desc, status: "to-do", createdAt: new Date().toISOString() });
                 status.style.color = '#10b981'; status.innerText = "Task Saved!";
                 document.getElementById('t-desc').value = '';
                 setTimeout(() => status.style.display = 'none', 3000);
-                
-                loadTasksTable(); // Refresh the table below
+                loadTasksTable(); 
             } catch (error) { console.error(error); }
         };
 
-        // Draws the Accordion Table
         window.loadTasksTable = async () => {
             const tbody = document.getElementById('tasks-table-body');
             tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading data...</td></tr>';
-
             try {
-                // 1. Fetch all projects and tasks
                 const pSnap = await getDocs(query(collection(db, "projects"), orderBy("createdAt", "desc")));
                 const tSnap = await getDocs(collection(db, "tasks"));
-                
-                // 2. Group tasks by their projectId
                 const tasksByProject = {};
                 tSnap.forEach(docSnap => {
                     const task = docSnap.data();
@@ -315,133 +330,100 @@
                     tasksByProject[task.projectId].push({ id: docSnap.id, ...task });
                 });
 
-                if(pSnap.empty) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>';
-                    return;
-                }
+                if(pSnap.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
 
                 tbody.innerHTML = '';
-                
-                // 3. Draw the rows
                 pSnap.forEach(docSnap => {
                     const project = docSnap.data();
                     const projectId = docSnap.id;
                     const tasks = tasksByProject[projectId] || [];
                     
-                    // The main row
+                    tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${projectId}', event)">▶</button></td><td style="font-weight: 500;">${project.name}</td><td>${tasks.length} Task(s)</td></tr>`;
+                    
+                    let taskListHTML = '<ul class="task-list">';
+                    if (tasks.length === 0) { taskListHTML = '<span style="color: #94a3b8;">No tasks created for this project yet.</span>'; } 
+                    else { tasks.forEach(t => { taskListHTML += `<li><span>${t.description}</span><button class="danger outline" style="padding: 4px 8px; font-size: 11px;" onclick="deleteTask('${t.id}')">Delete</button></li>`; }); taskListHTML += '</ul>'; }
+
+                    tbody.innerHTML += `<tr id="details-${projectId}" class="task-details-row"><td colspan="3" style="padding: 15px 20px;">${taskListHTML}</td></tr>`;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        window.toggleTaskRow = (projectId, event) => {
+            const row = document.getElementById(`details-${projectId}`);
+            const btn = event.target;
+            if (row.classList.contains('open')) { row.classList.remove('open'); btn.innerText = '▶'; } 
+            else { row.classList.add('open'); btn.innerText = '▼'; }
+        };
+
+        window.deleteTask = async (taskId) => {
+            if(confirm("Are you sure you want to delete this task?")) {
+                try { await deleteDoc(doc(db, "tasks", taskId)); loadTasksTable(); } catch (error) { console.error(error); }
+            }
+        };
+
+        // --- SUB PAGE 3: ADD TEAMS ---
+        window.saveTeam = async () => {
+            const nameInput = document.getElementById('team-name');
+            const name = nameInput.value.trim();
+            const status = document.getElementById('team-status');
+
+            if (!name) return alert("Please enter a team name.");
+
+            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
+
+            try {
+                // Popup Duplicate Checker for Teams
+                const dupQuery = query(collection(db, "teams"), where("name", "==", name));
+                const dupSnap = await getDocs(dupQuery);
+                
+                if (!dupSnap.empty) {
+                    status.style.display = 'none';
+                    alert(`Wait! A team with the name "${name}" already exists.\n\nPlease modify the name and try again.`);
+                    nameInput.focus();
+                    return; 
+                }
+
+                status.innerText = "Saving...";
+                await addDoc(collection(db, "teams"), { name: name, createdAt: new Date().toISOString() });
+                
+                status.style.color = '#10b981'; status.innerText = "Saved!";
+                nameInput.value = '';
+                setTimeout(() => status.style.display = 'none', 3000);
+                
+                loadTeamsTable(); 
+            } catch (error) { console.error("Save Team Error:", error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
+        };
+
+        window.loadTeamsTable = async () => {
+            const tbody = document.getElementById('team-table-body');
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading teams...</td></tr>';
+            try {
+                const q = query(collection(db, "teams"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No teams created yet.</td></tr>'; return; }
+
+                tbody.innerHTML = '';
+                querySnapshot.forEach((docSnap) => {
+                    const team = docSnap.data();
                     tbody.innerHTML += `
                         <tr>
-                            <td><button class="expand-btn" onclick="toggleTaskRow('${projectId}', event)">▶</button></td>
-                            <td style="font-weight: 500;">${project.name}</td>
-                            <td>${tasks.length} Task(s)</td>
-                        </tr>
-                    `;
-                    
-                    // The hidden "details" row containing the task list
-                    let taskListHTML = '<ul class="task-list">';
-                    if (tasks.length === 0) {
-                        taskListHTML = '<span style="color: #94a3b8;">No tasks created for this project yet.</span>';
-                    } else {
-                        tasks.forEach(t => {
-                            taskListHTML += `<li>
-                                <span>${t.description}</span>
-                                <button class="danger outline" style="padding: 4px 8px; font-size: 11px;" onclick="deleteTask('${t.id}')">Delete</button>
-                            </li>`;
-                        });
-                        taskListHTML += '</ul>';
-                    }
-
-                    tbody.innerHTML += `
-                        <tr id="details-${projectId}" class="task-details-row">
-                            <td colspan="3" style="padding: 15px 20px;">${taskListHTML}</td>
+                            <td style="font-weight: 500;">${team.name}</td>
+                            <td><button class="outline" style="padding: 6px 10px; font-size: 12px;" onclick="navTo('sub4')">Add Team Members</button></td>
+                            <td><button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteTeam('${docSnap.id}')">Delete</button></td>
                         </tr>
                     `;
                 });
             } catch (error) { console.error(error); }
         };
 
-        // Handles the click to expand/collapse the task row
-        window.toggleTaskRow = (projectId, event) => {
-            const row = document.getElementById(`details-${projectId}`);
-            const btn = event.target;
-            
-            if (row.classList.contains('open')) {
-                row.classList.remove('open');
-                btn.innerText = '▶';
-            } else {
-                row.classList.add('open');
-                btn.innerText = '▼';
+        window.deleteTeam = async (id) => {
+            if(confirm("Are you sure you want to delete this team?")) {
+                try { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } catch (error) { console.error(error); }
             }
         };
 
-        window.deleteTask = async (taskId) => {
-            if(confirm("Are you sure you want to delete this task?")) {
-                try {
-                    await deleteDoc(doc(db, "tasks", taskId));
-                    loadTasksTable(); // Refresh the table
-                } catch (error) { console.error(error); }
-            }
-        };
-        // ==========================================
-        // SUB PAGE 3: ADD TEAMS LOGIC
-        // ==========================================
-
-        window.saveTeam = async () => {
-            const nameInput = document.getElementById('t-name');
-            const name = nameInput.value.trim();
-            const status = document.getElementById('team-status');
-            const editId = document.getElementById('edit-team-id').value;
-
-            if (!name) return alert("Please enter a team name.");
-
-            status.style.display = 'inline'; 
-            status.style.color = '#64748b'; 
-            status.innerText = "Checking...";
-
-            try {
-                // Duplicate Name Check (Requires 'where' in your imports!)
-                const duplicateQuery = query(collection(db, "teams"), where("name", "==", name));
-                const duplicateSnapshot = await getDocs(duplicateQuery);
-                
-                let isDuplicate = false;
-                duplicateSnapshot.forEach((docSnap) => {
-                    if (docSnap.id !== editId) isDuplicate = true;
-                });
-
-                if (isDuplicate) {
-                    status.style.display = 'none';
-                    alert(`Wait! A team with the name "${name}" already exists.\n\nPlease modify the name and try again.`);
-                    nameInput.focus(); // Puts cursor back in the box
-                    return; 
-                }
-
-                status.innerText = "Saving...";
-
-                if (editId) {
-                    await updateDoc(doc(db, "teams", editId), { name: name });
-                    status.innerText = "Updated!";
-                } else {
-                    await addDoc(collection(db, "teams"), { name: name, createdAt: new Date().toISOString() });
-                    status.innerText = "Saved!";
-                }
-                
-                status.style.color = '#10b981';
-                setTimeout(() => status.style.display = 'none', 3000);
-                
-                cancelTeamEdit(); 
-                loadTeamsTable(); 
-            } catch (error) { 
-                console.error("Save Team Error:", error); 
-                status.style.color = '#ef4444'; 
-                status.innerText = "Error saving."; 
-                setTimeout(() => status.style.display = 'none', 3000);
-            }
-        };
-        
     </script>
 </body>
 </html>
-
-
-
-
