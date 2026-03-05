@@ -98,9 +98,6 @@
                 <button id="btn-save-project" onclick="saveProject()">Save Project</button>
                 <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left: 10px;">Cancel</button>
                 <span id="p-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
-                
-                <button onclick="saveProject()">Save Project</button>
-                <span id="p-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
 
                 <h3 style="margin-top: 40px;">Active Projects</h3>
                 <table>
@@ -187,10 +184,13 @@
                             <option value="">-- Loading Teams... --</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
-                        <button onclick="saveMember()" style="width: 100%;">Save Member</button>
+                    <div class="form-group" style="flex: 1; display: flex; align-items: flex-end; gap: 10px;">
+                        <input type="hidden" id="edit-member-id" value="">
+                        <button id="btn-save-member" onclick="saveMember()" style="width: 100%;">Save Member</button>
+                        <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
                     </div>
                 </div>
+
                 <span id="m-status" style="margin-left: 5px; font-size: 13px; display: none;"></span>
 
                 <h3 style="margin-top: 40px;">Registered Team Members</h3>
@@ -232,7 +232,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-       // Your web app's Firebase configuration
+        // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
   authDomain: "pm-pro-80c67.firebaseapp.com",
@@ -540,79 +540,113 @@ window.editProject = async (id) => {
             } catch (error) { console.error(error); }
         };
 
-        // Save the Member
+        // Upgraded Save Member (Handles both Create and Update)
         window.saveMember = async () => {
             const name = document.getElementById('m-name').value.trim();
-            const email = document.getElementById('m-email').value.trim().toLowerCase();
+            const emailInput = document.getElementById('m-email');
+            const email = emailInput.value.trim().toLowerCase();
             const phone = document.getElementById('m-phone').value.trim();
             const teamDropdown = document.getElementById('m-team-id');
             const teamId = teamDropdown.value;
             const status = document.getElementById('m-status');
+            const editId = document.getElementById('edit-member-id').value;
 
             if (!name || !email || !phone || !teamId) {
                 return alert("Please fill out all fields and select a team.");
             }
 
-            // Get the actual text name of the team from the dropdown
             const teamName = teamDropdown.options[teamDropdown.selectedIndex].text;
-
             status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
 
             try {
-                // Duplicate Checker: See if this email is already registered
-                const userRef = doc(db, "users", email);
-                const userSnap = await getDoc(userRef);
+                if (editId) {
+                    // IF EDITING: Update existing member
+                    await updateDoc(doc(db, "users", editId), {
+                        name: name,
+                        phone: phone,
+                        teamId: teamId,
+                        teamName: teamName
+                    });
+                    status.innerText = "Updated!";
+                } else {
+                    // IF NEW: Check for duplicates first
+                    const userRef = doc(db, "users", email);
+                    const userSnap = await getDoc(userRef);
 
-                if (userSnap.exists()) {
-                    if (userSnap.data().role === 'admin') {
-                        status.style.display = 'none';
-                        return alert("Wait! You cannot assign an Admin to a specific team here.");
+                    if (userSnap.exists()) {
+                        if (userSnap.data().role === 'admin') {
+                            status.style.display = 'none';
+                            return alert("Wait! You cannot assign an Admin to a specific team here.");
+                        }
+                        if (userSnap.data().teamId) {
+                            status.style.display = 'none';
+                            return alert(`Wait! The email "${email}" is already registered to a team.\n\nPlease use a different email or delete their existing record.`);
+                        }
                     }
-                    if (userSnap.data().teamId) {
-                        status.style.display = 'none';
-                        return alert(`Wait! The email "${email}" is already registered to a team.\n\nPlease use a different email or delete their existing record.`);
-                    }
+
+                    status.innerText = "Saving...";
+                    await setDoc(userRef, {
+                        name: name, email: email, phone: phone, teamId: teamId, teamName: teamName, role: "member", registeredAt: new Date().toISOString()
+                    }, { merge: true }); 
+                    status.innerText = "Saved!";
                 }
-
-                status.innerText = "Saving...";
                 
-                // Save using 'setDoc' so their Email is their specific Database ID
-                await setDoc(doc(db, "users", email), {
-                    name: name,
-                    email: email,
-                    phone: phone,
-                    teamId: teamId,
-                    teamName: teamName,
-                    role: "member",
-                    registeredAt: new Date().toISOString()
-                }, { merge: true }); 
-                
-                status.style.color = '#10b981'; status.innerText = "Saved!";
-                
-                // Clear the form
-                document.getElementById('m-name').value = '';
-                document.getElementById('m-email').value = '';
-                document.getElementById('m-phone').value = '';
-                document.getElementById('m-team-id').value = '';
-                
+                status.style.color = '#10b981';
                 setTimeout(() => status.style.display = 'none', 3000);
+                
+                cancelMemberEdit(); 
                 loadMembersTable(); 
             } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
         };
 
-        // Draw the Member Table
+        // NEW: Pull user data into the form for editing
+        window.editMember = async (emailId) => {
+            try {
+                const docSnap = await getDoc(doc(db, "users", emailId));
+                if (docSnap.exists()) {
+                    const m = docSnap.data();
+                    document.getElementById('m-name').value = m.name;
+                    document.getElementById('m-email').value = m.email;
+                    document.getElementById('m-phone').value = m.phone;
+                    document.getElementById('m-team-id').value = m.teamId;
+                    
+                    // Lock the email field so the database ID doesn't get changed
+                    document.getElementById('m-email').disabled = true;
+                    document.getElementById('m-email').style.backgroundColor = '#f1f5f9';
+
+                    document.getElementById('edit-member-id').value = emailId;
+                    document.getElementById('btn-save-member').innerText = "Update Member";
+                    document.getElementById('btn-cancel-member').classList.remove('hidden');
+                    
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) { console.error("Error fetching member:", error); }
+        };
+
+        // NEW: Clear the form and exit edit mode
+        window.cancelMemberEdit = () => {
+            document.getElementById('m-name').value = '';
+            document.getElementById('m-email').value = '';
+            document.getElementById('m-phone').value = '';
+            document.getElementById('m-team-id').value = '';
+            
+            // Unlock the email field
+            document.getElementById('m-email').disabled = false;
+            document.getElementById('m-email').style.backgroundColor = '#ffffff';
+
+            document.getElementById('edit-member-id').value = '';
+            document.getElementById('btn-save-member').innerText = "Save Member";
+            document.getElementById('btn-cancel-member').classList.add('hidden');
+        };
+
         window.loadMembersTable = async () => {
             const tbody = document.getElementById('member-table-body');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading members...</td></tr>';
             try {
-                // Only fetch users who have the role of "member"
                 const q = query(collection(db, "users"), where("role", "==", "member"));
                 const querySnapshot = await getDocs(q);
                 
-                if (querySnapshot.empty) { 
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No members found.</td></tr>'; 
-                    return; 
-                }
+                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No members found.</td></tr>'; return; }
 
                 tbody.innerHTML = '';
                 querySnapshot.forEach((docSnap) => {
@@ -624,7 +658,7 @@ window.editProject = async (id) => {
                             <td>${m.email}</td>
                             <td>${m.phone || 'N/A'}</td>
                             <td class="action-btns">
-                                <button class="outline" style="padding: 4px 8px; font-size: 11px;" onclick="alert('Edit coming soon')">Edit</button>
+                                <button class="outline" style="padding: 4px 8px; font-size: 11px;" onclick="editMember('${docSnap.id}')">Edit</button>
                                 <button class="danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteMember('${docSnap.id}')">Delete</button>
                             </td>
                         </tr>
@@ -633,17 +667,12 @@ window.editProject = async (id) => {
             } catch (error) { console.error(error); }
         };
 
-        // Delete Member
         window.deleteMember = async (emailId) => {
             if(confirm("Are you sure you want to remove this member? This will delete their team access.")) {
-                try { 
-                    await deleteDoc(doc(db, "users", emailId)); 
-                    loadMembersTable(); 
-                } catch (error) { console.error(error); }
+                try { await deleteDoc(doc(db, "users", emailId)); loadMembersTable(); } catch (error) { console.error(error); }
             }
         };
 
     </script>
 </body>
 </html>
-
