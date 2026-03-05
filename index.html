@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProPM - Workspace</title>
+    <style>
+        /* Clean, Modern SaaS Styling */
+        :root { --primary: #2563eb; --bg: #f8fafc; --surface: #ffffff; --text: #0f172a; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .card { background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid var(--border); width: 100%; max-width: 400px; text-align: center; margin-top: 50px; }
+        .dashboard { width: 100%; max-width: 900px; background: var(--surface); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border); }
+        
+        h1, h2, h3 { color: var(--primary); margin-top: 0; }
+        .hidden { display: none !important; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
+        button.outline { background: transparent; color: var(--text); border: 1px solid var(--border); width: auto; padding: 8px 15px; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-view" class="card">
+        <h1>ProPM</h1>
+        <p style="color: #64748b;">Sign in to your workspace.</p>
+        <button id="btn-login" onclick="signIn()">Continue with Google</button>
+        <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444;"></p>
+    </div>
+
+    <div id="admin-view" class="dashboard hidden">
+        <div class="header-bar">
+            <div>
+                <h2>Admin Console</h2>
+                <span style="background: #e0e7ff; color: #2563eb; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">ADMIN ROLE</span>
+            </div>
+            <div>
+                <span class="user-name" style="margin-right: 15px; font-weight: 500;"></span>
+                <button class="outline" onclick="signOutUser()">Log Out</button>
+            </div>
+        </div>
+        <p>Your management tools will go here in Step 3.</p>
+    </div>
+
+    <div id="member-view" class="dashboard hidden">
+        <div class="header-bar">
+            <div>
+                <h2>My Tasks</h2>
+                <span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">TEAM MEMBER ROLE</span>
+            </div>
+            <div>
+                <span class="user-name" style="margin-right: 15px; font-weight: 500;"></span>
+                <button class="outline" onclick="signOutUser()">Log Out</button>
+            </div>
+        </div>
+        <p>Your task list and status updates will go here in Step 4.</p>
+    </div>
+<script type="module">
+        // 1. Direct web imports (Bypassing the need for 'npm install')
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
+            authDomain: "pm-pro-80c67.firebaseapp.com",
+            projectId: "pm-pro-80c67",
+            storageBucket: "pm-pro-80c67.firebasestorage.app",
+            messagingSenderId: "553036723851",
+            appId: "1:553036723851:web:3167a4def993500c39468e"
+        };
+
+        // 3. Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // 4. Trigger Google Login Window
+        window.signIn = () => {
+            document.getElementById('auth-status').innerText = "Connecting...";
+            document.getElementById('auth-status').style.color = "#64748b";
+            signInWithPopup(auth, provider).catch((error) => {
+                document.getElementById('auth-status').innerText = error.message;
+                document.getElementById('auth-status').style.color = "#ef4444";
+            });
+        };
+
+        // 5. Trigger Log Out
+        window.signOutUser = () => { signOut(auth); };
+
+        // 6. THE GATEKEEPER: Routes you to Admin or Member screens
+        onAuthStateChanged(auth, async (user) => {
+            const loginView = document.getElementById('login-view');
+            const adminView = document.getElementById('admin-view');
+            const memberView = document.getElementById('member-view');
+
+            if (user) {
+                loginView.classList.add('hidden');
+                document.querySelectorAll('.user-name').forEach(el => el.innerText = user.displayName);
+                
+                try {
+                    const userRef = doc(db, "users", user.email);
+                    const userSnap = await getDoc(userRef);
+
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data();
+                        if (userData.role === 'admin') {
+                            adminView.classList.remove('hidden');
+                            memberView.classList.add('hidden');
+                        } else {
+                            memberView.classList.remove('hidden');
+                            adminView.classList.add('hidden');
+                        }
+                    } else {
+                        // First time login! Create a safe, default member profile.
+                        await setDoc(userRef, {
+                            name: user.displayName,
+                            email: user.email,
+                            role: "member", 
+                            teamId: null,
+                            registeredAt: new Date().toISOString()
+                        });
+                        
+                        memberView.classList.remove('hidden');
+                        adminView.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error("Error reading database:", error);
+                    loginView.classList.remove('hidden');
+                    document.getElementById('auth-status').innerText = "Database connection error.";
+                }
+            } else {
+                loginView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                memberView.classList.add('hidden');
+                document.getElementById('auth-status').innerText = "";
+            }
+        });
+    </script>
+    </body>
+</html>
