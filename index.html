@@ -32,7 +32,7 @@
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
         
-        /* THE SMOOTH TABLE UI FIX */
+        /* SMOOTH TABLE UI FIX FOR ALL PAGES */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #f1f5f9; font-weight: 600; color: #475569; font-size: 14px; }
@@ -57,7 +57,6 @@
 
     <div id="onboarding-view" class="hidden" style="max-width: 500px; margin: 5vh auto; background: var(--surface); padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border: 1px solid var(--border);">
         <h2 style="text-align: center; margin-bottom: 10px;">Setup Your Workspace</h2>
-        <p style="text-align: center; color: #64748b; margin-bottom: 30px; font-size: 14px;">Tell us a bit about your business to get started.</p>
         <div class="form-group"><label>Full Name</label><input type="text" id="ob-name"></div>
         <div class="form-group"><label>Company Name</label><input type="text" id="ob-company"></div>
         <div class="form-group"><label>Your Designation</label><input type="text" id="ob-role"></div>
@@ -72,7 +71,7 @@
         <div class="form-group" style="margin-bottom: 25px;"><label>Estimated Team Size</label>
             <select id="ob-size"><option value="1-5">1-5</option><option value="6-20">6-20</option><option value="50+">50+</option></select>
         </div>
-        <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
+        <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup</button>
     </div>
 
     <div id="admin-view" class="hidden">
@@ -85,7 +84,7 @@
             <button class="sidebar-btn" onclick="navTo('sub5')">5. Assign Project</button>
             <button class="sidebar-btn" onclick="navTo('sub6')">6. Analytics</button>
             <div style="flex: 1;"></div>
-            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;"> Logged in as: <br> <strong class="user-name"></strong> </div>
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Logged in as: <br><strong class="user-name"></strong></div>
             <button class="outline" onclick="signOutUser()">Log Out</button>
         </div>
 
@@ -93,92 +92,16 @@
             <div id="sub1" class="sub-page">
                 <h3>Create New Project</h3>
                 <div class="form-row">
-                    <div class="form-group" style="flex: 2;"><label>Enter Project Name</label><input type="text" id="p-name"></div>
-                    <div class="form-group"><label>Pick End Date</label><input type="date" id="p-date"></div>
+                    <div class="form-group" style="flex: 2;"><label>Project Name</label><input type="text" id="p-name"></div>
+                    <div class="form-group"><label>End Date</label><input type="date" id="p-date"></div>
                 </div>
                 <div class="form-group"><label>Description</label><input type="text" id="p-desc"></div>
-                <input type="hidden" id="edit-project-id" value="">
+                <input type="hidden" id="edit-project-id">
                 <button id="btn-save-project" onclick="saveProject()">Save Project</button>
-                <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left:10px">Cancel</button>
-                <span id="p-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
-                <h3>Active Projects</h3>
+                <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()">Cancel</button>
                 <table>
-                    <thead><tr><th>Project Name</th><th>End Date</th><th style="width: 150px;">Actions</th></tr></thead>
+                    <thead><tr><th>Project Name</th><th>End Date</th><th>Actions</th></tr></thead>
                     <tbody id="project-table-body"></tbody>
-                </table>
-            </div>
-
-            <div id="sub4" class="sub-page hidden">
-                <h3>Add Team Members</h3>
-                <div class="form-row">
-                    <div class="form-group"><label>Name</label><input type="text" id="m-name" placeholder="Full Name"></div>
-                    <div class="form-group"><label>Email</label><input type="email" id="m-email" placeholder="user@gmail.com"></div>
-                    <div class="form-group"><label>Phone</label><input type="text" id="m-phone" placeholder="+1234567890"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Select Team</label><select id="m-team-id"></select></div>
-                    <div class="form-group" style="display: flex; align-items: flex-end; gap: 10px;">
-                        <input type="hidden" id="edit-member-id" value="">
-                        <button id="btn-save-member" onclick="saveMember()" style="flex: 1;">Save Member</button>
-                        <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 30px;">Registered Team Members</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Team Assigned</th>
-                            <th>Email Address</th>
-                            <th>Phone Number</th>
-                            <th style="width: 150px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="member-table-body">
-                        </tbody>
-                </table>
-            </div>
-
-            <div id="sub5" class="sub-page hidden">
-                <h3>Assign Project Tasks</h3>
-                <select id="assign-project-select" onchange="loadAssignmentTable()" style="max-width: 400px; margin-bottom: 20px;"></select>
-                
-                <h3>Task Assignment Board</h3>
-                <table>
-                    <thead><tr><th>Task</th><th>Select Team</th><th>Select Member</th><th>Action</th></tr></thead>
-                    <tbody id="assign-table-body"></tbody>
-                </table>
-
-                <h3 style="margin-top: 40px;">Current Allocation Summary</h3>
-                <table>
-                    <thead><tr><th>Task Description</th><th>Team</th><th>Assigned To</th><th>Status</th></tr></thead>
-                    <tbody id="allocation-summary-body"></tbody>
-                </table>
-            </div>
-
-            <div id="sub6" class="sub-page hidden">
-                <h3>Workspace Analytics</h3>
-                <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
-                        <div style="font-size: 13px; color: #64748b;">Total Projects</div>
-                        <div id="stat-projects" style="font-size: 24px; font-weight: bold;">0</div>
-                    </div>
-                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
-                        <div style="font-size: 13px; color: #64748b;">Active Teams</div>
-                        <div id="stat-teams" style="font-size: 24px; font-weight: bold;">0</div>
-                    </div>
-                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
-                        <div style="font-size: 13px; color: #64748b;">Total Members</div>
-                        <div id="stat-members" style="font-size: 24px; font-weight: bold;">0</div>
-                    </div>
-                </div>
-                <h3>Project Progress Status</h3>
-                <div id="project-progress-container"></div>
-                <h3 style="margin-top: 30px;">Team Workload Breakdown</h3>
-                <table>
-                    <thead><tr><th>Team Name</th><th>Tasks Assigned</th><th>Workload Status</th></tr></thead>
-                    <tbody id="analytics-team-body"></tbody>
                 </table>
             </div>
 
@@ -186,10 +109,9 @@
                 <h3>Create Tasks</h3>
                 <div class="form-row">
                     <div class="form-group"><label>Select Project</label><select id="t-project-id"></select></div>
-                    <div class="form-group" style="flex: 2;"><label>Create task</label><input type="text" id="t-desc" placeholder="Enter task description..."></div>
+                    <div class="form-group" style="flex: 2;"><label>Task Description</label><input type="text" id="t-desc"></div>
                 </div>
                 <button onclick="saveTask()">Save Task</button>
-                <span id="t-status"></span>
                 <table id="tasks-table">
                     <thead><tr><th style="width: 30px;"></th><th>Project Name</th><th>Total Tasks</th></tr></thead>
                     <tbody id="tasks-table-body"></tbody>
@@ -200,11 +122,66 @@
                 <h3>Add Teams</h3>
                 <div class="form-row" style="align-items: flex-end;">
                     <div class="form-group" style="flex: 3;"><label>Team Name</label><input type="text" id="team-name"></div>
-                    <div style="flex: 1;"><button onclick="saveTeam()" style="width: 100%;">Save Team</button></div>
+                    <button onclick="saveTeam()" style="flex: 1;">Save Team</button>
                 </div>
                 <table>
                     <thead><tr><th>Team Name</th><th>Actions</th></tr></thead>
                     <tbody id="team-table-body"></tbody>
+                </table>
+            </div>
+
+            <div id="sub4" class="sub-page hidden">
+                <h3>Add Team Members</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Name</label><input type="text" id="m-name"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="m-email"></div>
+                    <div class="form-group"><label>Phone</label><input type="text" id="m-phone"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Select Team</label><select id="m-team-id"></select></div>
+                    <div class="form-group" style="display:flex; align-items:flex-end; gap:10px;">
+                        <input type="hidden" id="edit-member-id"><button id="btn-save-member" onclick="saveMember()" style="flex:1">Save</button>
+                        <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
+                    </div>
+                </div>
+                <table>
+                    <thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead>
+                    <tbody id="member-table-body"></tbody>
+                </table>
+            </div>
+
+            <div id="sub5" class="sub-page hidden">
+                <h3>Assign Project Tasks</h3>
+                <select id="assign-project-select" onchange="loadAssignmentTable()" style="max-width: 400px; margin-bottom: 20px;"></select>
+                <table>
+                    <thead><tr><th>Task</th><th>Team</th><th>Member</th><th>Action</th></tr></thead>
+                    <tbody id="assign-table-body"></tbody>
+                </table>
+                <h3 style="margin-top: 40px;">Current Allocation Summary</h3>
+                <table>
+                    <thead><tr><th>Task</th><th>Team</th><th>Assigned To</th><th>Status</th></tr></thead>
+                    <tbody id="allocation-summary-body"></tbody>
+                </table>
+            </div>
+
+            <div id="sub6" class="sub-page hidden">
+                <h3>Workspace Analytics</h3>
+                <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div>Total Projects</div><div id="stat-projects" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    </div>
+                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div>Active Teams</div><div id="stat-teams" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    </div>
+                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div>Total Members</div><div id="stat-members" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    </div>
+                </div>
+                <h3>Project Progress Status</h3><div id="project-progress-container"></div>
+                <h3 style="margin-top: 30px;">Team Workload</h3>
+                <table>
+                    <thead><tr><th>Team</th><th>Tasks Assigned</th><th>Status</th></tr></thead>
+                    <tbody id="analytics-team-body"></tbody>
                 </table>
             </div>
         </div>
@@ -239,7 +216,6 @@
                 const userSnap = await getDoc(doc(db, "users", user.email));
                 if (userSnap.exists() && userSnap.data().onboardingComplete) {
                     document.getElementById('admin-view').classList.remove('hidden');
-                    document.getElementById('onboarding-view').classList.add('hidden');
                     loadProjectsTable();
                 } else {
                     document.getElementById('onboarding-view').classList.remove('hidden');
@@ -271,21 +247,21 @@
             document.getElementById(pageId).classList.remove('hidden');
             if(window.event) window.event.target.classList.add('active');
             if(pageId === 'sub1') loadProjectsTable();
+            if(pageId === 'sub2') { loadProjectDropdown(); loadTasksTable(); }
+            if(pageId === 'sub3') loadTeamsTable();
             if(pageId === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
             if(pageId === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); }
             if(pageId === 'sub6') runAnalytics();
         };
 
-        // PROJECTS
+        // SUB 1 Logic
         window.saveProject = async () => {
-            const name = document.getElementById('p-name').value.trim();
+            const name = document.getElementById('p-name').value;
             const editId = document.getElementById('edit-project-id').value;
-            if(!name) return alert("Name required");
             if(editId) await updateDoc(doc(db, "projects", editId), {name, endDate: document.getElementById('p-date').value, description: document.getElementById('p-desc').value});
             else await addDoc(collection(db, "projects"), {name, endDate: document.getElementById('p-date').value, description: document.getElementById('p-desc').value, createdAt: new Date().toISOString()});
             cancelEdit(); loadProjectsTable();
         };
-
         window.loadProjectsTable = async () => {
             const snap = await getDocs(query(collection(db, "projects"), orderBy("createdAt", "desc")));
             const tbody = document.getElementById('project-table-body');
@@ -294,7 +270,6 @@
                 tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate}</td><td class="action-btns"><button class="outline" onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Delete</button></td></tr>`;
             });
         };
-
         window.editProject = async (id) => {
             const d = await getDoc(doc(db, "projects", id));
             const p = d.data();
@@ -307,86 +282,84 @@
         window.cancelEdit = () => { document.getElementById('edit-project-id').value = ''; document.getElementById('btn-cancel-edit').classList.add('hidden'); };
         window.deleteProject = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db,"projects",id)); loadProjectsTable(); } };
 
-        // MEMBERS
+        // SUB 2 & 3 Logic
+        window.loadProjectDropdown = async () => {
+            const snap = await getDocs(collection(db, "projects"));
+            const dd = document.getElementById('t-project-id');
+            dd.innerHTML = '<option value="">-- Select --</option>';
+            snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
+        };
+        window.saveTask = async () => {
+            const pid = document.getElementById('t-project-id').value;
+            const desc = document.getElementById('t-desc').value;
+            if(!pid || !desc) return alert("Select project and desc");
+            await addDoc(collection(db, "tasks"), {projectId: pid, description: desc, status: "to-do", createdAt: new Date().toISOString()});
+            document.getElementById('t-desc').value = ''; loadTasksTable();
+        };
+        window.loadTasksTable = async () => {
+            const [pSnap, tSnap] = await Promise.all([getDocs(collection(db, "projects")), getDocs(collection(db, "tasks"))]);
+            const tbody = document.getElementById('tasks-table-body');
+            tbody.innerHTML = '';
+            pSnap.forEach(d => {
+                const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
+                tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${d.id}', event)">▶</button></td><td>${d.data().name}</td><td>${tasks.length}</td></tr>
+                <tr id="details-${d.id}" class="task-details-row"><td colspan="3"><ul class="task-list">
+                    ${tasks.map(t => `<li>${t.data().description} <button class="danger" style="padding:4px 8px;" onclick="deleteTask('${t.id}')">Delete</button></li>`).join('')}
+                </ul></td></tr>`;
+            });
+        };
+        window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
+        window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
+        window.saveTeam = async () => {
+            const name = document.getElementById('team-name').value.trim();
+            if(!name) return;
+            await addDoc(collection(db, "teams"), {name, createdAt: new Date().toISOString()});
+            document.getElementById('team-name').value = ''; loadTeamsTable();
+        };
+        window.loadTeamsTable = async () => {
+            const snap = await getDocs(collection(db, "teams"));
+            const tbody = document.getElementById('team-table-body');
+            tbody.innerHTML = '';
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button class="danger" onclick="deleteTeam('${d.id}')">Delete</button></td></tr>`);
+        };
+        window.deleteTeam = async (id) => { await deleteDoc(doc(db,"teams",id)); loadTeamsTable(); };
+
+        // SUB 4 Logic
         window.loadTeamDropdownForMembers = async () => {
             const snap = await getDocs(collection(db, "teams"));
             const dd = document.getElementById('m-team-id');
             dd.innerHTML = '<option value="">-- Select --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
-
         window.saveMember = async () => {
             const email = document.getElementById('m-email').value.toLowerCase();
             const tid = document.getElementById('m-team-id').value;
             const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
-            await setDoc(doc(db, "users", email), { name: document.getElementById('m-name').value, phone: document.getElementById('m-phone').value, teamId: tid, teamName: tname, role: 'member' }, { merge: true });
-            loadMembersTable();
+            const editId = document.getElementById('edit-member-id').value;
+            if(editId) await updateDoc(doc(db, "users", editId), {name: document.getElementById('m-name').value, phone: document.getElementById('m-phone').value, teamId: tid, teamName: tname});
+            else await setDoc(doc(db, "users", email), {name: document.getElementById('m-name').value, phone: document.getElementById('m-phone').value, teamId: tid, teamName: tname, role: 'member', email}, {merge: true});
+            cancelMemberEdit(); loadMembersTable();
         };
-
-        // --- UPDATED LOAD MEMBERS TABLE ---
         window.loadMembersTable = async () => {
+            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
             const tbody = document.getElementById('member-table-body');
-            try {
-                const q = query(collection(db, "users"), where("role", "==", "member"));
-                const snap = await getDocs(q);
-                tbody.innerHTML = '';
-                
-                snap.forEach((docSnap) => {
-                    const m = docSnap.data();
-                    const id = docSnap.id;
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight: 500;">${m.name}</td>
-                            <td><span style="background: #e0e7ff; color: #2563eb; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 11px;">${m.teamName || 'N/A'}</span></td>
-                            <td>${m.email}</td>
-                            <td>${m.phone || 'N/A'}</td>
-                            <td class="action-btns">
-                                <button class="outline" style="padding: 6px 10px; font-size: 11px;" onclick="editMember('${id}')">Edit</button>
-                                <button class="danger" style="padding: 6px 10px; font-size: 11px;" onclick="deleteMember('${id}')">Delete</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (error) { console.error(error); }
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td><span style="background:#e0e7ff; color:#2563eb; padding:4px 8px; border-radius:4px; font-weight:bold;">${d.data().teamName}</span></td><td>${d.data().email}</td><td>${d.data().phone}</td><td class="action-btns"><button class="outline" onclick="editMember('${d.id}')">Edit</button><button class="danger" onclick="deleteMember('${d.id}')">Delete</button></td></tr>`;
+            });
         };
-
-        // --- EDIT MEMBER FUNCTION ---
         window.editMember = async (id) => {
-            try {
-                const docSnap = await getDoc(doc(db, "users", id));
-                if (docSnap.exists()) {
-                    const m = docSnap.data();
-                    document.getElementById('m-name').value = m.name;
-                    document.getElementById('m-email').value = m.email;
-                    document.getElementById('m-email').disabled = true; // Lock email during edit
-                    document.getElementById('m-email').style.backgroundColor = '#f1f5f9';
-                    document.getElementById('m-phone').value = m.phone || "";
-                    document.getElementById('m-team-id').value = m.teamId;
-
-                    document.getElementById('edit-member-id').value = id;
-                    document.getElementById('btn-save-member').innerText = "Update Member";
-                    document.getElementById('btn-cancel-member').classList.remove('hidden');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            } catch (error) { console.error(error); }
+            const d = await getDoc(doc(db, "users", id));
+            const m = d.data();
+            document.getElementById('m-name').value = m.name;
+            const eIn = document.getElementById('m-email'); eIn.value = m.email; eIn.disabled = true; eIn.style.backgroundColor = '#f1f5f9';
+            document.getElementById('m-phone').value = m.phone; document.getElementById('m-team-id').value = m.teamId;
+            document.getElementById('edit-member-id').value = id; document.getElementById('btn-cancel-member').classList.remove('hidden');
         };
+        window.cancelMemberEdit = () => { document.getElementById('edit-member-id').value = ''; const eIn = document.getElementById('m-email'); eIn.disabled = false; eIn.style.backgroundColor = '#fff'; document.getElementById('btn-cancel-member').classList.add('hidden'); };
+        window.deleteMember = async (id) => { await deleteDoc(doc(db,"users",id)); loadMembersTable(); };
 
-        // --- CANCEL EDIT FUNCTION ---
-        window.cancelMemberEdit = () => {
-            document.getElementById('m-name').value = '';
-            const emailInput = document.getElementById('m-email');
-            emailInput.value = '';
-            emailInput.disabled = false;
-            emailInput.style.backgroundColor = '#ffffff';
-            document.getElementById('m-phone').value = '';
-            document.getElementById('m-team-id').value = '';
-            document.getElementById('edit-member-id').value = '';
-            document.getElementById('btn-save-member').innerText = "Save Member";
-            document.getElementById('btn-cancel-member').classList.add('hidden');
-        };
-        window.deleteMember = async (id) => { if(confirm("Remove?")) { await deleteDoc(doc(db,"users",id)); loadMembersTable(); } };
-
-        // ASSIGNMENT (FIXED)
+        // SUB 5 Logic
         window.workspaceTeams = []; window.workspaceMembers = [];
         window.loadAssignProjectDropdown = async () => {
             const snap = await getDocs(collection(db, "projects"));
@@ -394,13 +367,11 @@
             dd.innerHTML = '<option value="">-- Select Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
-
         window.fetchTeamsAndMembers = async () => {
             const [tSnap, mSnap] = await Promise.all([getDocs(collection(db, "teams")), getDocs(query(collection(db, "users"), where("role", "==", "member")))]);
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         };
-
         window.loadAssignmentTable = async () => {
             const pid = document.getElementById('assign-project-select').value;
             const [tSnap, tbody, sbody] = [await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid))), document.getElementById('assign-table-body'), document.getElementById('allocation-summary-body')];
@@ -411,30 +382,27 @@
                 sbody.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${t.assignedToName || 'Unassigned'}</td><td>${t.status}</td></tr>`;
             });
         };
-
         window.updateRowMembers = (tid) => {
             const teamId = document.getElementById(`t-${tid}`).value;
             const filtered = window.workspaceMembers.filter(m => m.teamId === teamId);
             document.getElementById(`m-${tid}`).innerHTML = filtered.map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         };
-
         window.assignSpecificTask = async (tid) => {
             const email = document.getElementById(`m-${tid}`).value;
+            const teamId = document.getElementById(`t-${tid}`).value;
             const teamName = document.getElementById(`t-${tid}`).options[document.getElementById(`t-${tid}`).selectedIndex].text;
             const member = window.workspaceMembers.find(m => m.email === email);
-            await updateDoc(doc(db, "tasks", tid), { assignedToEmail: email, assignedToName: member.name, assignedTeamName: teamName, assignedTeamId: document.getElementById(`t-${tid}`).value, status: 'assigned' });
+            await updateDoc(doc(db, "tasks", tid), { assignedToEmail: email, assignedToName: member.name, assignedTeamName: teamName, assignedTeamId: teamId, status: 'assigned' });
             loadAssignmentTable();
         };
 
-        // ANALYTICS (FIXED CALCULATION)
+        // SUB 6 Logic
         window.runAnalytics = async () => {
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([getDocs(collection(db, "projects")), getDocs(collection(db, "tasks")), getDocs(collection(db, "teams")), getDocs(query(collection(db, "users"), where("role", "==", "member")))]);
             document.getElementById('stat-projects').innerText = pSnap.size;
             document.getElementById('stat-teams').innerText = teamSnap.size;
             document.getElementById('stat-members').innerText = mSnap.size;
-
-            const container = document.getElementById('project-progress-container');
-            container.innerHTML = '';
+            const container = document.getElementById('project-progress-container'); container.innerHTML = '';
             pSnap.forEach(d => {
                 const ptasks = tSnap.docs.filter(t => t.data().projectId === d.id);
                 const done = ptasks.filter(t => t.data().status === 'completed').length;
@@ -444,32 +412,11 @@
                     <div style="width:100%; background:#f1f5f9; height:10px; border-radius:5px; margin-top:5px;"><div style="width:${perc}%; background:var(--primary); height:10px; border-radius:5px;"></div></div>
                 </div>`;
             });
-
-            const tBody = document.getElementById('analytics-team-body');
-            tBody.innerHTML = '';
+            const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
             teamSnap.forEach(d => {
                 const count = tSnap.docs.filter(t => t.data().assignedTeamId === d.id).length;
                 tBody.innerHTML += `<tr><td>${d.data().name}</td><td>${count} Task(s)</td><td><span style="color:${count > 5 ? '#ef4444' : '#10b981'}; font-weight:bold">${count > 5 ? 'High Load' : 'Active'}</span></td></tr>`;
             });
-        };
-        // Unused logic stubs to avoid errors
-        // --- SUB PAGE 2: TASKS LOGIC ---
-        window.saveTask = async () => {
-            const pid = document.getElementById('t-project-id').value;
-            const desc = document.getElementById('t-desc').value;
-            if(!pid || !desc) return alert("Select project and enter description.");
-            await addDoc(collection(db, "tasks"), { projectId: pid, description: desc, status: "to-do", createdAt: new Date().toISOString() });
-            document.getElementById('t-desc').value = '';
-            loadTasksTable();
-        };
-
-        // --- SUB PAGE 3: TEAMS LOGIC ---
-        window.saveTeam = async () => {
-            const name = document.getElementById('team-name').value.trim();
-            if(!name) return alert("Enter team name.");
-            await addDoc(collection(db, "teams"), { name: name, createdAt: new Date().toISOString() });
-            document.getElementById('team-name').value = '';
-            loadTeamsTable();
         };
     </script>
 </body>
