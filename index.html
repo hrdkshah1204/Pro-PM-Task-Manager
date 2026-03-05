@@ -236,7 +236,42 @@
                     </tbody>
                 </table>
             </div>
-            <div id="sub6" class="sub-page hidden"><h3>Analytics (Coming Soon)</h3></div>
+            <div id="sub6" class="sub-page hidden">
+                <h3>Workspace Analytics</h3>
+                
+                <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                    <div style="flex: 1; background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 13px; color: #64748b; font-weight: 500;">Total Projects</div>
+                        <div id="stat-projects" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    </div>
+                    <div style="flex: 1; background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 13px; color: #64748b; font-weight: 500;">Active Teams</div>
+                        <div id="stat-teams" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    </div>
+                    <div style="flex: 1; background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 13px; color: #64748b; font-weight: 500;">Total Members</div>
+                        <div id="stat-members" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    </div>
+                </div>
+
+                <h3>Project Completion Status</h3>
+                <div id="project-progress-container" style="display: flex; flex-direction: column; gap: 15px;">
+                    </div>
+
+                <h3 style="margin-top: 40px;">Team Workload</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Team Name</th>
+                            <th>Tasks Assigned</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-team-body">
+                        <tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading analytics...</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
         </div>
     </div>
@@ -310,7 +345,9 @@ const firebaseConfig = {
             if(pageId === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
  	    // NEW: Load Sub Page 5 data
             if(pageId === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); 
-	// Pre-load people for the dropdowns
+	    // Pre-load people for the dropdowns
+	    // NEW: Trigger Analytics load
+            if(pageId === 'sub6') { runAnalytics(); }
             }
  };
 
@@ -846,6 +883,78 @@ window.editProject = async (id) => {
             }
         };
 
+// ==========================================
+        // SUB PAGE 6: ANALYTICS LOGIC
+        // ==========================================
+
+        window.runAnalytics = async () => {
+            const projProgressContainer = document.getElementById('project-progress-container');
+            const teamTableBody = document.getElementById('analytics-team-body');
+            
+            projProgressContainer.innerHTML = '<p style="color: #94a3b8;">Calculating...</p>';
+            
+            try {
+                // 1. Fetch all raw data
+                const pSnap = await getDocs(collection(db, "projects"));
+                const tSnap = await getDocs(collection(db, "tasks"));
+                const teamSnap = await getDocs(collection(db, "teams"));
+                const memberSnap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
+
+                // 2. Update Top Metric Cards
+                document.getElementById('stat-projects').innerText = pSnap.size;
+                document.getElementById('stat-teams').innerText = teamSnap.size;
+                document.getElementById('stat-members').innerText = memberSnap.size;
+
+                // 3. Process Project Progress Bars
+                projProgressContainer.innerHTML = '';
+                pSnap.forEach(projDoc => {
+                    const project = projDoc.data();
+                    const projectId = projDoc.id;
+                    
+                    const projectTasks = [];
+                    tSnap.forEach(tDoc => { if(tDoc.data().projectId === projectId) projectTasks.push(tDoc.data()); });
+
+                    const total = projectTasks.length;
+                    const completed = projectTasks.filter(t => t.status === 'completed').length;
+                    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+                    projProgressContainer.innerHTML += `
+                        <div style="background: var(--surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+                                <strong>${project.name}</strong>
+                                <span>${percentage}% (${completed}/${total} Tasks)</span>
+                            </div>
+                            <div style="width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden;">
+                                <div style="width: ${percentage}%; background: var(--primary); height: 100%; transition: width 0.5s ease;"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // 4. Process Team Workload Table
+                teamTableBody.innerHTML = '';
+                teamSnap.forEach(teamDoc => {
+                    const team = teamDoc.data();
+                    const teamId = teamDoc.id;
+                    
+                    let taskCount = 0;
+                    tSnap.forEach(tDoc => { if(tDoc.data().assignedTeamId === teamId) taskCount++; });
+
+                    const statusTag = taskCount > 5 
+                        ? '<span style="color: #f59e0b;">Busy</span>' 
+                        : (taskCount > 0 ? '<span style="color: #10b981;">Active</span>' : '<span style="color: #94a3b8;">Available</span>');
+
+                    teamTableBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: 500;">${team.name}</td>
+                            <td>${taskCount} Task(s)</td>
+                            <td>${statusTag}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch (error) { console.error("Analytics Error:", error); }
+        };
     </script>
 </body>
 </html>
