@@ -258,6 +258,22 @@
                     <select id="assign-project-select" onchange="loadAssignmentTable()">
                         <option value="">-- Select a Project --</option>
                     </select>
+
+		<h3 style="margin-top: 40px;">Current Allocation Summary</h3>
+                <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">Review all assigned tasks for this project.</p>
+                <table id="allocation-summary-table">
+                    <thead>
+                        <tr>
+                            <th>Task Description</th>
+                            <th>Team</th>
+                            <th>Assigned To</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allocation-summary-body">
+                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Select a project to view summary...</td></tr>
+                    </tbody>
+                </table>
                 </div>
 
                 <h3 style="margin-top: 30px;">Task Assignment Board</h3>
@@ -710,59 +726,82 @@ const firebaseConfig = {
             }
         };
 
-        // --- SUB PAGE 5: ASSIGN PROJECT LOGIC ---
-        window.workspaceTeams = []; window.workspaceMembers = [];
-        window.loadAssignProjectDropdown = async () => {
-            const dropdown = document.getElementById('assign-project-select');
-            dropdown.innerHTML = '<option value="">-- Select a Project --</option>';
-            try {
-                const querySnapshot = await getDocs(collection(db, "projects"));
-                querySnapshot.forEach((docSnap) => { dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`; });
-            } catch (error) { console.error(error); }
-        };
-
-        window.fetchTeamsAndMembers = async () => {
-            window.workspaceTeams = []; window.workspaceMembers = [];
-            const tSnap = await getDocs(collection(db, "teams"));
-            tSnap.forEach(doc => window.workspaceTeams.push({ id: doc.id, ...doc.data() }));
-            const mSnap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
-            mSnap.forEach(doc => window.workspaceMembers.push({ email: doc.id, ...doc.data() }));
-        };
-
+        // --- SUB PAGE 5: UPDATED ASSIGNMENT LOGIC ---
         window.loadAssignmentTable = async () => {
             const projectId = document.getElementById('assign-project-select').value;
             const tbody = document.getElementById('assign-table-body');
+            const summaryBody = document.getElementById('allocation-summary-body');
+            
             if (!projectId) return;
+
             tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+            summaryBody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+
             try {
                 const q = query(collection(db, "tasks"), where("projectId", "==", projectId));
                 const snap = await getDocs(q);
+                
                 tbody.innerHTML = '';
+                summaryBody.innerHTML = '';
+
+                if (snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
+                    summaryBody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
+                    return;
+                }
+
                 let teamOptions = '<option value="">-- Select Team --</option>';
                 window.workspaceTeams.forEach(t => teamOptions += `<option value="${t.id}">${t.name}</option>`);
+
                 snap.forEach((docSnap) => {
                     const task = docSnap.data();
                     const tid = docSnap.id;
-                    tbody.innerHTML += `<tr><td>${task.description}</td><td><select id="team-select-${tid}" onchange="updateRowMembers('${tid}')">${teamOptions}</select></td><td><select id="member-select-${tid}"><option value="">-- Select --</option></select></td><td><button onclick="assignSpecificTask('${tid}')">Assign</button></td></tr>`;
+
+                    // 1. Build the Assignment Rows
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${task.description}</td>
+                            <td><select id="team-select-${tid}" onchange="updateRowMembers('${tid}')">${teamOptions}</select></td>
+                            <td><select id="member-select-${tid}"><option value="">-- Select --</option></select></td>
+                            <td><button onclick="assignSpecificTask('${tid}')">Assign</button></td>
+                        </tr>
+                    `;
+
+                    // 2. Build the Summary Rows
+                    const assignedName = task.assignedToName || '<span style="color:#ef4444">Unassigned</span>';
+                    const teamName = task.assignedTeamName || 'N/A';
+                    const statusColor = task.status === 'assigned' ? '#2563eb' : '#64748b';
+
+                    summaryBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:500;">${task.description}</td>
+                            <td>${teamName}</td>
+                            <td>${assignedName}</td>
+                            <td><span style="color:${statusColor}; font-weight:bold; text-transform:uppercase; font-size:11px;">${task.status}</span></td>
+                        </tr>
+                    `;
                 });
             } catch (error) { console.error(error); }
         };
 
-        window.updateRowMembers = (taskId) => {
-            const teamId = document.getElementById(`team-select-${taskId}`).value;
-            const memberDropdown = document.getElementById(`member-select-${taskId}`);
-            memberDropdown.innerHTML = '<option value="">-- Select Member --</option>';
-            const filtered = window.workspaceMembers.filter(m => m.teamId === teamId);
-            filtered.forEach(m => memberDropdown.innerHTML += `<option value="${m.email}">${m.name}</option>`);
-        };
-
         window.assignSpecificTask = async (taskId) => {
+            const teamSelect = document.getElementById(`team-select-${taskId}`);
             const memberEmail = document.getElementById(`member-select-${taskId}`).value;
-            if (!memberEmail) return alert("Select member.");
+            
+            if (!memberEmail) return alert("Please select a team member.");
+
+            const teamName = teamSelect.options[teamSelect.selectedIndex].text;
             const memberObj = window.workspaceMembers.find(m => m.email === memberEmail);
+
             try {
-                await updateDoc(doc(db, "tasks", taskId), { assignedToEmail: memberEmail, assignedToName: memberObj.name, status: "assigned" });
-                alert("Assigned!"); loadAssignmentTable();
+                await updateDoc(doc(db, "tasks", taskId), { 
+                    assignedToEmail: memberEmail, 
+                    assignedToName: memberObj.name,
+                    assignedTeamName: teamName, // Store the name for the summary table
+                    status: "assigned" 
+                });
+                alert("Task Successfully Allocated!");
+                loadAssignmentTable(); // Refresh both tables
             } catch (error) { console.error(error); }
         };
 
