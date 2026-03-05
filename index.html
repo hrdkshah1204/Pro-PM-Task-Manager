@@ -13,13 +13,17 @@
         h1, h2, h3 { color: var(--primary); margin-top: 0; }
         
         /* Buttons & Inputs */
-        button { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 500; cursor: pointer; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
         button.danger { background: #ef4444; }
         button.outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-        input { padding: 10px; border: 1px solid var(--border); border-radius: 6px; width: 100%; box-sizing: border-box; }
+        button.outline:hover { background: #eff6ff; }
+        
+        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; width: 100%; box-sizing: border-box; font-family: inherit; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         
         /* Login Screen */
-        #login-view { max-width: 400px; margin: 10vh auto; background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        #login-view { max-width: 400px; margin: 10vh auto; background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border: 1px solid var(--border); }
         
         /* Admin Shell Layout */
         #admin-view { display: flex; min-height: 100vh; }
@@ -27,15 +31,15 @@
         .sidebar-btn { background: transparent; color: var(--text); text-align: left; border: none; padding: 12px; border-radius: 6px; font-weight: 500; cursor: pointer; }
         .sidebar-btn:hover { background: var(--bg); }
         .sidebar-btn.active { background: #e0e7ff; color: var(--primary); }
-        .main-content { flex: 1; padding: 30px; }
+        .main-content { flex: 1; padding: 30px; max-width: 1000px; }
         
-        /* Sub Page Layouts */
+        /* Form Layouts */
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
         
         /* Tables */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #f1f5f9; font-weight: 600; color: #475569; font-size: 14px; }
         td { font-size: 14px; }
@@ -51,6 +55,7 @@
         <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444;"></p>
     </div>
 
+
     <div id="admin-view" class="hidden">
         
         <div class="sidebar">
@@ -62,7 +67,7 @@
             <button class="sidebar-btn" onclick="navTo('sub5')">5. Assign Project</button>
             <button class="sidebar-btn" onclick="navTo('sub6')">6. Analytics</button>
             <div style="flex: 1;"></div>
-            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Logged in as: <span class="user-name"></span></div>
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Logged in as: <br><strong class="user-name"></strong></div>
             <button class="outline" onclick="signOutUser()">Log Out</button>
         </div>
 
@@ -87,7 +92,10 @@
                     <input type="text" id="p-desc" maxlength="1000" placeholder="Description details...">
                 </div>
                 
-                <button onclick="saveProject()">Save Project</button>
+                <input type="hidden" id="edit-project-id" value="">
+                
+                <button id="btn-save-project" onclick="saveProject()">Save Project</button>
+                <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left: 10px;">Cancel</button>
                 <span id="p-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
 
                 <h3 style="margin-top: 40px;">Active Projects</h3>
@@ -105,7 +113,7 @@
                 </table>
             </div>
 
-            <div id="sub2" class="sub-page hidden"><h3>Create Tasks (Coming Soon)</h3></div>
+            <div id="sub2" class="sub-page hidden"><h3>Create Tasks (Building Next)</h3></div>
             <div id="sub3" class="sub-page hidden"><h3>Add Teams (Coming Soon)</h3></div>
             <div id="sub4" class="sub-page hidden"><h3>Add Members (Coming Soon)</h3></div>
             <div id="sub5" class="sub-page hidden"><h3>Assign Project (Coming Soon)</h3></div>
@@ -114,33 +122,36 @@
         </div>
     </div>
 
-    <div id="member-view" class="hidden">
-        <h2>Team Member Dashboard</h2>
-        <button onclick="signOutUser()">Log Out</button>
+    <div id="member-view" class="hidden" style="padding: 30px; max-width: 800px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+            <h2>My Tasks</h2>
+            <div>
+                <span class="user-name" style="margin-right: 15px; font-weight: 500;"></span>
+                <button class="outline" onclick="signOutUser()">Log Out</button>
+            </div>
+        </div>
+        <p style="color: #64748b;">Your task dashboard will appear here.</p>
     </div>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
-  authDomain: "pm-pro-80c67.firebaseapp.com",
-  projectId: "pm-pro-80c67",
-  storageBucket: "pm-pro-80c67.firebasestorage.app",
-  messagingSenderId: "553036723851",
-  appId: "1:553036723851:web:3167a4def993500c39468e"
-};
-
+        // *** PASTE YOUR FIREBASE KEYS HERE ***
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // --- AUTH GATEKEEPER ---
+        // --- AUTH & GATEKEEPER LOGIC ---
         window.signIn = () => signInWithPopup(auth, provider).catch(err => document.getElementById('auth-status').innerText = err.message);
         window.signOutUser = () => signOut(auth);
 
@@ -166,23 +177,24 @@ const firebaseConfig = {
             }
         });
 
-        // --- NAVIGATION LOGIC ---
+        // --- SIDEBAR NAVIGATION LOGIC ---
         window.navTo = (pageId) => {
-            // Hide all pages, remove active class from buttons
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             
-            // Show selected page, add active class
             document.getElementById(pageId).classList.remove('hidden');
             event.target.classList.add('active');
         };
 
-        // --- SUB PAGE 1 LOGIC: CREATE PROJECT ---
+        // --- SUB PAGE 1: CREATE PROJECT LOGIC ---
+        
+        // Save or Update Project
         window.saveProject = async () => {
             const name = document.getElementById('p-name').value;
             const date = document.getElementById('p-date').value;
             const desc = document.getElementById('p-desc').value;
             const status = document.getElementById('p-status');
+            const editId = document.getElementById('edit-project-id').value;
 
             if (!name || !date || !desc) {
                 alert("Please fill out all project fields."); return;
@@ -191,19 +203,24 @@ const firebaseConfig = {
             status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Saving...";
 
             try {
-                await addDoc(collection(db, "projects"), {
-                    name: name,
-                    endDate: date,
-                    description: desc,
-                    createdAt: new Date().toISOString()
-                });
+                if (editId) {
+                    // Update existing project
+                    await updateDoc(doc(db, "projects", editId), {
+                        name: name, endDate: date, description: desc
+                    });
+                    status.innerText = "Updated!";
+                } else {
+                    // Create new project
+                    await addDoc(collection(db, "projects"), {
+                        name: name, endDate: date, description: desc, createdAt: new Date().toISOString()
+                    });
+                    status.innerText = "Saved!";
+                }
                 
-                status.style.color = '#10b981'; status.innerText = "Saved!";
-                document.getElementById('p-name').value = '';
-                document.getElementById('p-date').value = '';
-                document.getElementById('p-desc').value = '';
-                
+                status.style.color = '#10b981';
                 setTimeout(() => status.style.display = 'none', 3000);
+                
+                cancelEdit(); // Reset form
                 loadProjectsTable(); // Refresh the table
             } catch (error) {
                 console.error(error);
@@ -211,12 +228,12 @@ const firebaseConfig = {
             }
         };
 
+        // Fetch and draw table
         window.loadProjectsTable = async () => {
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading...</td></tr>';
 
             try {
-                // Fetch projects sorted by creation date
                 const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
                 const querySnapshot = await getDocs(q);
                 
@@ -235,7 +252,7 @@ const firebaseConfig = {
                             <td style="font-weight: 500;">${p.name}</td>
                             <td>${p.endDate}</td>
                             <td class="action-btns">
-                                <button class="outline" style="padding: 6px 10px; font-size: 12px;" onclick="alert('Edit feature coming soon')">Edit</button>
+                                <button class="outline" style="padding: 6px 10px; font-size: 12px;" onclick="editProject('${id}')">Edit</button>
                                 <button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteProject('${id}')">Delete</button>
                             </td>
                         </tr>
@@ -244,6 +261,37 @@ const firebaseConfig = {
             } catch (error) { console.error(error); }
         };
 
+        // Setup form for editing
+        window.editProject = async (id) => {
+            try {
+                const docSnap = await getDoc(doc(db, "projects", id));
+                if (docSnap.exists()) {
+                    const p = docSnap.data();
+                    
+                    document.getElementById('p-name').value = p.name;
+                    document.getElementById('p-date').value = p.endDate;
+                    document.getElementById('p-desc').value = p.description;
+                    
+                    document.getElementById('edit-project-id').value = id;
+                    document.getElementById('btn-save-project').innerText = "Update Project";
+                    document.getElementById('btn-cancel-edit').classList.remove('hidden');
+                    
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) { console.error("Error fetching project:", error); }
+        };
+
+        // Cancel edit mode
+        window.cancelEdit = () => {
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-date').value = '';
+            document.getElementById('p-desc').value = '';
+            document.getElementById('edit-project-id').value = '';
+            document.getElementById('btn-save-project').innerText = "Save Project";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        };
+
+        // Delete project
         window.deleteProject = async (id) => {
             if(confirm("Are you sure you want to delete this project? This cannot be undone.")) {
                 try {
