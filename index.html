@@ -8,42 +8,30 @@
         /* Modern SaaS Variables */
         :root { --primary: #2563eb; --bg: #f8fafc; --surface: #ffffff; --text: #0f172a; --border: #e2e8f0; }
         body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
-        
         .hidden { display: none !important; }
         h1, h2, h3 { color: var(--primary); margin-top: 0; }
-        
         button { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
         button.danger { background: #ef4444; }
         button.outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
         button.outline:hover { background: #eff6ff; }
-        
         input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; width: 100%; box-sizing: border-box; font-family: inherit; }
         input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        
-        /* Login Screen */
         #login-view { max-width: 400px; margin: 10vh auto; background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border: 1px solid var(--border); }
-        
-        /* Admin Shell Layout */
         #admin-view { display: flex; min-height: 100vh; }
         .sidebar { width: 250px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         .sidebar-btn { background: transparent; color: var(--text); text-align: left; border: none; padding: 12px; border-radius: 6px; font-weight: 500; cursor: pointer; }
         .sidebar-btn:hover { background: var(--bg); }
         .sidebar-btn.active { background: #e0e7ff; color: var(--primary); }
         .main-content { flex: 1; padding: 30px; max-width: 1000px; }
-        
-        /* Form Layouts */
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
-        
-        /* Tables & Accordion */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #f1f5f9; font-weight: 600; color: #475569; font-size: 14px; }
         td { font-size: 14px; }
         .action-btns { display: flex; gap: 8px; }
-        
         .expand-btn { background: transparent; border: none; color: var(--primary); font-size: 16px; cursor: pointer; padding: 0; width: 24px; text-align: center; }
         .task-details-row { background: #f8fafc; display: none; }
         .task-details-row.open { display: table-row; }
@@ -61,7 +49,6 @@
     </div>
 
     <div id="admin-view" class="hidden">
-        
         <div class="sidebar">
             <h2 style="margin-bottom: 20px;">Admin Console</h2>
             <button class="sidebar-btn active" onclick="navTo('sub1')">1. Create Project</button>
@@ -76,7 +63,6 @@
         </div>
 
         <div class="main-content">
-            
             <div id="sub1" class="sub-page">
                 <h3>Create New Project</h3>
                 <div class="form-row">
@@ -89,24 +75,18 @@
                         <input type="date" id="p-date">
                     </div>
                 </div>
-               <div class="form-group" style="margin-bottom: 15px;">
+                <div class="form-group" style="margin-bottom: 15px;">
                     <label>Enter Project Description</label>
                     <input type="text" id="p-desc" maxlength="1000" placeholder="Description details...">
                 </div>
-                
                 <input type="hidden" id="edit-project-id" value="">
                 <button id="btn-save-project" onclick="saveProject()">Save Project</button>
                 <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left: 10px;">Cancel</button>
                 <span id="p-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
-
                 <h3 style="margin-top: 40px;">Active Projects</h3>
                 <table>
-                    <thead>
-                        <tr><th>Project Name</th><th>End Date</th><th style="width: 100px;">Actions</th></tr>
-                    </thead>
-                    <tbody id="project-table-body">
-                        <tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading projects...</td></tr>
-                    </tbody>
+                    <thead><tr><th>Project Name</th><th>End Date</th><th style="width: 100px;">Actions</th></tr></thead>
+                    <tbody id="project-table-body"><tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading...</td></tr></tbody>
                 </table>
             </div>
 
@@ -122,402 +102,179 @@
                         <input type="text" id="t-desc" maxlength="1500" placeholder="Enter task description...">
                     </div>
                 </div>
-                
                 <button onclick="saveTask()">Save Task</button>
                 <span id="t-status" style="margin-left: 15px; font-size: 13px; display: none;"></span>
-
-                <h3 style="margin-top: 40px;">Tasks by Project</h3>
                 <table id="tasks-table">
                     <thead><tr><th style="width: 30px;"></th><th>Project Name</th><th>Total Tasks</th></tr></thead>
-                    <tbody id="tasks-table-body"><tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading data...</td></tr></tbody>
+                    <tbody id="tasks-table-body"></tbody>
                 </table>
             </div>
 
             <div id="sub3" class="sub-page hidden">
                 <h3>Add Teams</h3>
-                <p style="font-size: 13px; color: #64748b;">Create organizational groups for your workspace.</p>
                 <div class="form-row" style="align-items: flex-end;">
-                    <div class="form-group" style="flex: 3;">
-                        <label>Add New Team Name</label>
-                        <input type="text" id="team-name" maxlength="1500" placeholder="e.g., Engineering, Marketing">
-                    </div>
-                    <div style="flex: 1;">
-                        <button onclick="saveTeam()" style="width: 100%;">Save Team</button>
-                    </div>
+                    <div class="form-group" style="flex: 3;"><label>Team Name</label><input type="text" id="team-name"></div>
+                    <div style="flex: 1;"><button onclick="saveTeam()" style="width: 100%;">Save Team</button></div>
                 </div>
-                <span id="team-status" style="margin-left: 5px; font-size: 13px; display: none;"></span>
-
-                <h3 style="margin-top: 40px;">Workspace Teams</h3>
+                <span id="team-status" style="display: none;"></span>
                 <table>
-                    <thead>
-                        <tr><th>Team Name</th><th>Manage Members</th><th style="width: 100px;">Actions</th></tr>
-                    </thead>
-                    <tbody id="team-table-body">
-                        <tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading teams...</td></tr>
-                    </tbody>
+                    <thead><tr><th>Team Name</th><th>Manage</th><th>Actions</th></tr></thead>
+                    <tbody id="team-table-body"></tbody>
                 </table>
             </div>
 
             <div id="sub4" class="sub-page hidden">
                 <h3>Add Team Members</h3>
-                <p style="font-size: 13px; color: #64748b;">Register colleagues and assign them to your teams.</p>
-                
                 <div class="form-row">
-                    <div class="form-group" style="flex: 2;">
-                        <label>Name</label>
-                        <input type="text" id="m-name" maxlength="1200" placeholder="Full Name">
-                    </div>
-                    <div class="form-group" style="flex: 2;">
-                        <label>Email Address</label>
-                        <input type="email" id="m-email" maxlength="300" placeholder="user@gmail.com">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>Phone Number</label>
-                        <input type="text" id="m-phone" maxlength="13" placeholder="+1234567890">
-                    </div>
+                    <div class="form-group"><label>Name</label><input type="text" id="m-name"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="m-email"></div>
                 </div>
-                
                 <div class="form-row">
-                    <div class="form-group" style="flex: 2;">
-                        <label>Select Team</label>
-                        <select id="m-team-id">
-                            <option value="">-- Loading Teams... --</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex: 1; display: flex; align-items: flex-end; gap: 10px;">
-                        <input type="hidden" id="edit-member-id" value="">
-                        <button id="btn-save-member" onclick="saveMember()" style="width: 100%;">Save Member</button>
-                        <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
-                    </div>
+                    <div class="form-group"><label>Phone</label><input type="text" id="m-phone"></div>
+                    <div class="form-group"><label>Team</label><select id="m-team-id"></select></div>
                 </div>
-
-                <span id="m-status" style="margin-left: 5px; font-size: 13px; display: none;"></span>
-
-                <h3 style="margin-top: 40px;">Registered Team Members</h3>
+                <input type="hidden" id="edit-member-id" value="">
+                <button onclick="saveMember()">Save Member</button>
+                <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
+                <span id="m-status"></span>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Team Assigned</th>
-                            <th>Email Address</th>
-                            <th>Phone Number</th>
-                            <th style="width: 120px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="member-table-body">
-                        <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading members...</td></tr>
-                    </tbody>
+                    <thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Actions</th></tr></thead>
+                    <tbody id="member-table-body"></tbody>
                 </table>
             </div>
 
             <div id="sub5" class="sub-page hidden">
                 <h3>Assign Project Tasks</h3>
-                <p style="font-size: 13px; color: #64748b;">Select a project to assign its tasks to your teams.</p>
-                
-                <div class="form-group" style="margin-bottom: 20px; max-width: 400px;">
-                    <label>1. Select Project</label>
-                    <select id="assign-project-select" onchange="loadAssignmentTable()">
-                        <option value="">-- Select a Project --</option>
-                    </select>
-                </div>
-
-                <h3 style="margin-top: 30px;">Task Assignment Board</h3>
+                <select id="assign-project-select" onchange="loadAssignmentTable()"></select>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Task Description</th>
-                            <th style="width: 25%;">Select Team</th>
-                            <th style="width: 25%;">Select Member</th>
-                            <th style="width: 100px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="assign-table-body">
-                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Select a project above...</td></tr>
-                    </tbody>
+                    <thead><tr><th>Task</th><th>Team</th><th>Member</th><th>Action</th></tr></thead>
+                    <tbody id="assign-table-body"></tbody>
                 </table>
             </div>
+
             <div id="sub6" class="sub-page hidden">
                 <h3>Workspace Analytics</h3>
-                
                 <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-                    <div style="flex: 1; background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
-                        <div style="font-size: 13px; color: #64748b; font-weight: 500;">Total Projects</div>
-                        <div id="stat-projects" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 13px; color: #64748b;">Total Projects</div>
+                        <div id="stat-projects" style="font-size: 24px; font-weight: bold;">0</div>
                     </div>
-                    <div style="flex: 1; background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
-                        <div style="font-size: 13px; color: #64748b; font-weight: 500;">Active Teams</div>
-                        <div id="stat-teams" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 13px; color: #64748b;">Active Teams</div>
+                        <div id="stat-teams" style="font-size: 24px; font-weight: bold;">0</div>
                     </div>
-                    <div style="flex: 1; background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
-                        <div style="font-size: 13px; color: #64748b; font-weight: 500;">Total Members</div>
-                        <div id="stat-members" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</div>
+                    <div style="flex: 1; background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center;">
+                        <div style="font-size: 13px; color: #64748b;">Total Members</div>
+                        <div id="stat-members" style="font-size: 24px; font-weight: bold;">0</div>
                     </div>
                 </div>
-
-                <h3>Project Completion Status</h3>
-                <div id="project-progress-container" style="display: flex; flex-direction: column; gap: 15px;">
-                    </div>
-
-                <h3 style="margin-top: 40px;">Team Workload</h3>
+                <h3>Project Progress</h3>
+                <div id="project-progress-container"></div>
+                <h3 style="margin-top: 30px;">Team Workload</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Team Name</th>
-                            <th>Tasks Assigned</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="analytics-team-body">
-                        <tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading analytics...</td></tr>
-                    </tbody>
+                    <thead><tr><th>Team Name</th><th>Tasks Assigned</th><th>Status</th></tr></thead>
+                    <tbody id="analytics-team-body"></tbody>
                 </table>
             </div>
-
         </div>
     </div>
 
-    <div id="member-view" class="hidden" style="padding: 30px; max-width: 800px; margin: 0 auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
-            <h2>My Tasks</h2>
-            <div>
-                <span class="user-name" style="margin-right: 15px; font-weight: 500;"></span>
-                <button class="outline" onclick="signOutUser()">Log Out</button>
-            </div>
-        </div>
-        <p style="color: #64748b;">Your task dashboard will appear here.</p>
-    </div>
+    <div id="member-view" class="hidden">Member View Placeholder</div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
-  authDomain: "pm-pro-80c67.firebaseapp.com",
-  projectId: "pm-pro-80c67",
-  storageBucket: "pm-pro-80c67.firebasestorage.app",
-  messagingSenderId: "553036723851",
-  appId: "1:553036723851:web:3167a4def993500c39468e"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
+            authDomain: "pm-pro-80c67.firebaseapp.com",
+            projectId: "pm-pro-80c67",
+            storageBucket: "pm-pro-80c67.firebasestorage.app",
+            messagingSenderId: "553036723851",
+            appId: "1:553036723851:web:3167a4def993500c39468e"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        window.signIn = () => signInWithPopup(auth, provider).catch(err => document.getElementById('auth-status').innerText = err.message);
+        window.signIn = () => signInWithPopup(auth, provider).catch(err => alert(err.message));
         window.signOutUser = () => signOut(auth);
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('login-view').classList.add('hidden');
                 document.querySelectorAll('.user-name').forEach(el => el.innerText = user.displayName);
-                
                 const userSnap = await getDoc(doc(db, "users", user.email));
                 if (userSnap.exists() && userSnap.data().role === 'admin') {
                     document.getElementById('admin-view').classList.remove('hidden');
-                    loadProjectsTable(); 
-                } else if (!userSnap.exists()) {
-                    await setDoc(doc(db, "users", user.email), { name: user.displayName, email: user.email, role: "member" });
-                    document.getElementById('member-view').classList.remove('hidden');
+                    loadProjectsTable();
                 } else {
                     document.getElementById('member-view').classList.remove('hidden');
                 }
             } else {
                 document.getElementById('login-view').classList.remove('hidden');
                 document.getElementById('admin-view').classList.add('hidden');
-                document.getElementById('member-view').classList.add('hidden');
             }
         });
 
-        // --- NAVIGATION LOGIC ---
         window.navTo = (pageId) => {
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(pageId).classList.remove('hidden');
-            event.target.classList.add('active');
+            if (event) event.target.classList.add('active');
 
-            // Trigger table loads when navigating
+            if(pageId === 'sub1') loadProjectsTable();
             if(pageId === 'sub2') { loadProjectDropdown(); loadTasksTable(); }
-            if(pageId === 'sub3') { loadTeamsTable(); }
+            if(pageId === 'sub3') loadTeamsTable();
             if(pageId === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
- 	    // NEW: Load Sub Page 5 data
-            if(pageId === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); 
-	    // Pre-load people for the dropdowns
-	    // NEW: Trigger Analytics load
-            if(pageId === 'sub6') { runAnalytics(); }
-            }
- };
+            if(pageId === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); }
+            if(pageId === 'sub6') runAnalytics();
+        };
 
-        // --- SUB PAGE 1: CREATE PROJECT ---
+        // SUB PAGE 1 LOGIC
         window.saveProject = async () => {
             const nameInput = document.getElementById('p-name');
             const name = nameInput.value.trim();
             const date = document.getElementById('p-date').value;
             const desc = document.getElementById('p-desc').value.trim();
-            const status = document.getElementById('p-status');
             const editId = document.getElementById('edit-project-id').value;
-
-            if (!name || !date || !desc) return alert("Please fill out all project fields.");
-
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
-
+            if (!name || !date || !desc) return alert("Fill all fields");
             try {
-                // Popup Duplicate Checker
-                const dupQuery = query(collection(db, "projects"), where("name", "==", name));
-                const dupSnap = await getDocs(dupQuery);
-                
-                let isDuplicate = false;
-                dupSnap.forEach((docSnap) => {
-                    // It's only a duplicate if the names match AND it's a different project ID
-                    if (docSnap.id !== editId) isDuplicate = true;
-                });
-
-                if (isDuplicate) {
-                    status.style.display = 'none';
-                    alert(`Wait! A project with the name "${name}" already exists.\n\nPlease modify the name and try again.`);
-                    nameInput.focus();
-                    return; 
-                }
-
-                status.innerText = "Saving...";
-                
                 if (editId) {
-                    // Update Mode
                     await updateDoc(doc(db, "projects", editId), { name, endDate: date, description: desc });
-                    status.innerText = "Updated!";
                 } else {
-                    // Create Mode
                     await addDoc(collection(db, "projects"), { name, endDate: date, description: desc, createdAt: new Date().toISOString() });
-                    status.innerText = "Saved!";
                 }
-                
-                status.style.color = '#10b981';
-                setTimeout(() => status.style.display = 'none', 3000);
-                
-                cancelEdit();
-                loadProjectsTable(); 
-            } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
+                cancelEdit(); loadProjectsTable();
+            } catch (e) { console.error(e); }
         };
 
         window.loadProjectsTable = async () => {
             const tbody = document.getElementById('project-table-body');
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading...</td></tr>';
-            try {
-                const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
-
-                tbody.innerHTML = '';
-                querySnapshot.forEach((docSnap) => {
-                    const p = docSnap.data();
-                    const id = docSnap.id;
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight: 500;">${p.name}</td>
-                            <td>${p.endDate}</td>
-                            <td class="action-btns">
-                                <button class="outline" style="padding: 6px 10px; font-size: 12px;" onclick="editProject('${id}')">Edit</button>
-                                <button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteProject('${id}')">Delete</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (error) { console.error(error); }
+            const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                const p = d.data();
+                tbody.innerHTML += `<tr><td>${p.name}</td><td>${p.endDate}</td><td>
+                    <button class="outline" onclick="editProject('${d.id}')">Edit</button>
+                    <button class="danger" onclick="deleteProject('${d.id}')">Delete</button>
+                </td></tr>`;
+            });
         };
 
-
-        // --- SUB PAGE 2: CREATE TASKS ---
-        window.loadProjectDropdown = async () => {
-            const dropdown = document.getElementById('t-project-id');
-            dropdown.innerHTML = '<option value="">-- Select a Project --</option>';
-            try {
-                const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((docSnap) => { dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`; });
-            } catch (error) { console.error(error); }
-        };
-
-        window.saveTask = async () => {
-            const projectId = document.getElementById('t-project-id').value;
-            const desc = document.getElementById('t-desc').value;
-            const status = document.getElementById('t-status');
-
-            if (!projectId || !desc) return alert("Please select a project and enter a task description.");
-
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Saving...";
-            try {
-                await addDoc(collection(db, "tasks"), { projectId, description: desc, status: "to-do", createdAt: new Date().toISOString() });
-                status.style.color = '#10b981'; status.innerText = "Task Saved!";
-                document.getElementById('t-desc').value = '';
-                setTimeout(() => status.style.display = 'none', 3000);
-                loadTasksTable(); 
-            } catch (error) { console.error(error); }
-        };
-
-        window.loadTasksTable = async () => {
-            const tbody = document.getElementById('tasks-table-body');
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading data...</td></tr>';
-            try {
-                const pSnap = await getDocs(query(collection(db, "projects"), orderBy("createdAt", "desc")));
-                const tSnap = await getDocs(collection(db, "tasks"));
-                const tasksByProject = {};
-                tSnap.forEach(docSnap => {
-                    const task = docSnap.data();
-                    if(!tasksByProject[task.projectId]) tasksByProject[task.projectId] = [];
-                    tasksByProject[task.projectId].push({ id: docSnap.id, ...task });
-                });
-
-                if(pSnap.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
-
-                tbody.innerHTML = '';
-                pSnap.forEach(docSnap => {
-                    const project = docSnap.data();
-                    const projectId = docSnap.id;
-                    const tasks = tasksByProject[projectId] || [];
-                    
-                    tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${projectId}', event)">▶</button></td><td style="font-weight: 500;">${project.name}</td><td>${tasks.length} Task(s)</td></tr>`;
-                    
-                    let taskListHTML = '<ul class="task-list">';
-                    if (tasks.length === 0) { taskListHTML = '<span style="color: #94a3b8;">No tasks created for this project yet.</span>'; } 
-                    else { tasks.forEach(t => { taskListHTML += `<li><span>${t.description}</span><button class="danger outline" style="padding: 4px 8px; font-size: 11px;" onclick="deleteTask('${t.id}')">Delete</button></li>`; }); taskListHTML += '</ul>'; }
-
-                    tbody.innerHTML += `<tr id="details-${projectId}" class="task-details-row"><td colspan="3" style="padding: 15px 20px;">${taskListHTML}</td></tr>`;
-                });
-            } catch (error) { console.error(error); }
-        };
-
-        window.toggleTaskRow = (projectId, event) => {
-            const row = document.getElementById(`details-${projectId}`);
-            const btn = event.target;
-            if (row.classList.contains('open')) { row.classList.remove('open'); btn.innerText = '▶'; } 
-            else { row.classList.add('open'); btn.innerText = '▼'; }
-        };
-
-        window.deleteTask = async (taskId) => {
-            if(confirm("Are you sure you want to delete this task?")) {
-                try { await deleteDoc(doc(db, "tasks", taskId)); loadTasksTable(); } catch (error) { console.error(error); }
-            }
-        };
-
-window.editProject = async (id) => {
-            try {
-                const docSnap = await getDoc(doc(db, "projects", id));
-                if (docSnap.exists()) {
-                    const p = docSnap.data();
-                    document.getElementById('p-name').value = p.name;
-                    document.getElementById('p-date').value = p.endDate;
-                    document.getElementById('p-desc').value = p.description;
-                    
-                    document.getElementById('edit-project-id').value = id;
-                    document.getElementById('btn-save-project').innerText = "Update Project";
-                    document.getElementById('btn-cancel-edit').classList.remove('hidden');
-                    
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            } catch (error) { console.error("Error fetching project:", error); }
+        window.editProject = async (id) => {
+            const d = await getDoc(doc(db, "projects", id));
+            const p = d.data();
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-date').value = p.endDate;
+            document.getElementById('p-desc').value = p.description;
+            document.getElementById('edit-project-id').value = id;
+            document.getElementById('btn-save-project').innerText = "Update Project";
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
         };
 
         window.cancelEdit = () => {
@@ -529,451 +286,188 @@ window.editProject = async (id) => {
             document.getElementById('btn-cancel-edit').classList.add('hidden');
         };
 
-        // --- SUB PAGE 3: ADD TEAMS ---
+        window.deleteProject = async (id) => {
+            if (confirm("Delete?")) { await deleteDoc(doc(db, "projects", id)); loadProjectsTable(); }
+        };
+
+        // SUB PAGE 2 LOGIC
+        window.loadProjectDropdown = async () => {
+            const dropdown = document.getElementById('t-project-id');
+            const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            dropdown.innerHTML = '<option value="">-- Select --</option>';
+            snap.forEach(d => { dropdown.innerHTML += `<option value="${d.id}">${d.data().name}</option>`; });
+        };
+
+        window.saveTask = async () => {
+            const pid = document.getElementById('t-project-id').value;
+            const desc = document.getElementById('t-desc').value;
+            if (!pid || !desc) return alert("Select project and desc");
+            await addDoc(collection(db, "tasks"), { projectId: pid, description: desc, status: "to-do", createdAt: new Date().toISOString() });
+            document.getElementById('t-desc').value = ''; loadTasksTable();
+        };
+
+        window.loadTasksTable = async () => {
+            const tbody = document.getElementById('tasks-table-body');
+            const pSnap = await getDocs(collection(db, "projects"));
+            const tSnap = await getDocs(collection(db, "tasks"));
+            const tasksByProject = {};
+            tSnap.forEach(d => {
+                const t = d.data();
+                if(!tasksByProject[t.projectId]) tasksByProject[t.projectId] = [];
+                tasksByProject[t.projectId].push({id: d.id, ...t});
+            });
+            tbody.innerHTML = '';
+            pSnap.forEach(d => {
+                const pid = d.id;
+                const tasks = tasksByProject[pid] || [];
+                tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${pid}', event)">▶</button></td><td>${d.data().name}</td><td>${tasks.length}</td></tr>
+                <tr id="details-${pid}" class="task-details-row"><td colspan="3"><ul class="task-list">
+                    ${tasks.map(t => `<li>${t.description} <button class="danger" onclick="deleteTask('${t.id}')">Delete</button></li>`).join('')}
+                </ul></td></tr>`;
+            });
+        };
+
+        window.toggleTaskRow = (id, e) => {
+            const row = document.getElementById(`details-${id}`);
+            const open = row.classList.toggle('open');
+            e.target.innerText = open ? '▼' : '▶';
+        };
+
+        window.deleteTask = async (id) => { if(confirm("Delete task?")) { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); } };
+
+        // SUB PAGE 3 LOGIC
         window.saveTeam = async () => {
-            const nameInput = document.getElementById('team-name');
-            const name = nameInput.value.trim();
-            const status = document.getElementById('team-status');
-
-            if (!name) return alert("Please enter a team name.");
-
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
-
-            try {
-                // Popup Duplicate Checker for Teams
-                const dupQuery = query(collection(db, "teams"), where("name", "==", name));
-                const dupSnap = await getDocs(dupQuery);
-                
-                if (!dupSnap.empty) {
-                    status.style.display = 'none';
-                    alert(`Wait! A team with the name "${name}" already exists.\n\nPlease modify the name and try again.`);
-                    nameInput.focus();
-                    return; 
-                }
-
-                status.innerText = "Saving...";
-                await addDoc(collection(db, "teams"), { name: name, createdAt: new Date().toISOString() });
-                
-                status.style.color = '#10b981'; status.innerText = "Saved!";
-                nameInput.value = '';
-                setTimeout(() => status.style.display = 'none', 3000);
-                
-                loadTeamsTable(); 
-            } catch (error) { console.error("Save Team Error:", error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
+            const name = document.getElementById('team-name').value.trim();
+            if(!name) return alert("Name required");
+            await addDoc(collection(db, "teams"), { name, createdAt: new Date().toISOString() });
+            document.getElementById('team-name').value = ''; loadTeamsTable();
         };
 
         window.loadTeamsTable = async () => {
             const tbody = document.getElementById('team-table-body');
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading teams...</td></tr>';
-            try {
-                const q = query(collection(db, "teams"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No teams created yet.</td></tr>'; return; }
-
-                tbody.innerHTML = '';
-                querySnapshot.forEach((docSnap) => {
-                    const team = docSnap.data();
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight: 500;">${team.name}</td>
-                            <td><button class="outline" style="padding: 6px 10px; font-size: 12px;" onclick="navTo('sub4')">Add Team Members</button></td>
-                            <td><button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteTeam('${docSnap.id}')">Delete</button></td>
-                        </tr>
-                    `;
-                });
-            } catch (error) { console.error(error); }
+            const snap = await getDocs(collection(db, "teams"));
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button class="outline" onclick="navTo('sub4')">Members</button></td><td><button class="danger" onclick="deleteTeam('${d.id}')">Delete</button></td></tr>`;
+            });
         };
 
-        window.deleteTeam = async (id) => {
-            if(confirm("Are you sure you want to delete this team?")) {
-                try { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } catch (error) { console.error(error); }
-            }
-        };
+        window.deleteTeam = async (id) => { if(confirm("Delete team?")) { await deleteDoc(doc(db,"teams",id)); loadTeamsTable(); } };
 
-// --- SUB PAGE 4: ADD MEMBERS ---
-        
-        // Fill the Team Dropdown
+        // SUB PAGE 4 LOGIC
         window.loadTeamDropdownForMembers = async () => {
             const dropdown = document.getElementById('m-team-id');
-            dropdown.innerHTML = '<option value="">-- Select a Team --</option>';
-            try {
-                const q = query(collection(db, "teams"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((docSnap) => {
-                    dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
-                });
-            } catch (error) { console.error(error); }
+            const snap = await getDocs(collection(db, "teams"));
+            dropdown.innerHTML = '<option value="">-- Select --</option>';
+            snap.forEach(d => { dropdown.innerHTML += `<option value="${d.id}">${d.data().name}</option>`; });
         };
 
-        // Upgraded Save Member (Handles both Create and Update)
         window.saveMember = async () => {
-            const name = document.getElementById('m-name').value.trim();
-            const emailInput = document.getElementById('m-email');
-            const email = emailInput.value.trim().toLowerCase();
-            const phone = document.getElementById('m-phone').value.trim();
-            const teamDropdown = document.getElementById('m-team-id');
-            const teamId = teamDropdown.value;
-            const status = document.getElementById('m-status');
-            const editId = document.getElementById('edit-member-id').value;
-
-            if (!name || !email || !phone || !teamId) {
-                return alert("Please fill out all fields and select a team.");
-            }
-
-            const teamName = teamDropdown.options[teamDropdown.selectedIndex].text;
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
-
-            try {
-                if (editId) {
-                    // IF EDITING: Update existing member
-                    await updateDoc(doc(db, "users", editId), {
-                        name: name,
-                        phone: phone,
-                        teamId: teamId,
-                        teamName: teamName
-                    });
-                    status.innerText = "Updated!";
-                } else {
-                    // IF NEW: Check for duplicates first
-                    const userRef = doc(db, "users", email);
-                    const userSnap = await getDoc(userRef);
-
-                    if (userSnap.exists()) {
-                        if (userSnap.data().role === 'admin') {
-                            status.style.display = 'none';
-                            return alert("Wait! You cannot assign an Admin to a specific team here.");
-                        }
-                        if (userSnap.data().teamId) {
-                            status.style.display = 'none';
-                            return alert(`Wait! The email "${email}" is already registered to a team.\n\nPlease use a different email or delete their existing record.`);
-                        }
-                    }
-
-                    status.innerText = "Saving...";
-                    await setDoc(userRef, {
-                        name: name, email: email, phone: phone, teamId: teamId, teamName: teamName, role: "member", registeredAt: new Date().toISOString()
-                    }, { merge: true }); 
-                    status.innerText = "Saved!";
-                }
-                
-                status.style.color = '#10b981';
-                setTimeout(() => status.style.display = 'none', 3000);
-                
-                cancelMemberEdit(); 
-                loadMembersTable(); 
-            } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
-        };
-
-        // NEW: Pull user data into the form for editing
-        window.editMember = async (emailId) => {
-            try {
-                const docSnap = await getDoc(doc(db, "users", emailId));
-                if (docSnap.exists()) {
-                    const m = docSnap.data();
-                    document.getElementById('m-name').value = m.name;
-                    document.getElementById('m-email').value = m.email;
-                    document.getElementById('m-phone').value = m.phone;
-                    document.getElementById('m-team-id').value = m.teamId;
-                    
-                    // Lock the email field so the database ID doesn't get changed
-                    document.getElementById('m-email').disabled = true;
-                    document.getElementById('m-email').style.backgroundColor = '#f1f5f9';
-
-                    document.getElementById('edit-member-id').value = emailId;
-                    document.getElementById('btn-save-member').innerText = "Update Member";
-                    document.getElementById('btn-cancel-member').classList.remove('hidden');
-                    
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            } catch (error) { console.error("Error fetching member:", error); }
-        };
-
-        // NEW: Clear the form and exit edit mode
-        window.cancelMemberEdit = () => {
-            document.getElementById('m-name').value = '';
-            document.getElementById('m-email').value = '';
-            document.getElementById('m-phone').value = '';
-            document.getElementById('m-team-id').value = '';
-            
-            // Unlock the email field
-            document.getElementById('m-email').disabled = false;
-            document.getElementById('m-email').style.backgroundColor = '#ffffff';
-
-            document.getElementById('edit-member-id').value = '';
-            document.getElementById('btn-save-member').innerText = "Save Member";
-            document.getElementById('btn-cancel-member').classList.add('hidden');
+            const n = document.getElementById('m-name').value;
+            const e = document.getElementById('m-email').value.toLowerCase();
+            const p = document.getElementById('m-phone').value;
+            const tid = document.getElementById('m-team-id').value;
+            const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
+            if(!n || !e || !tid) return alert("Fill fields");
+            await setDoc(doc(db, "users", e), { name: n, email: e, phone: p, teamId: tid, teamName: tname, role: "member" }, { merge: true });
+            loadMembersTable();
         };
 
         window.loadMembersTable = async () => {
             const tbody = document.getElementById('member-table-body');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading members...</td></tr>';
-            try {
-                const q = query(collection(db, "users"), where("role", "==", "member"));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No members found.</td></tr>'; return; }
-
-                tbody.innerHTML = '';
-                querySnapshot.forEach((docSnap) => {
-                    const m = docSnap.data();
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight: 500;">${m.name || 'N/A'}</td>
-                            <td><span style="background: #e0e7ff; color: #2563eb; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">${m.teamName || 'Unassigned'}</span></td>
-                            <td>${m.email}</td>
-                            <td>${m.phone || 'N/A'}</td>
-                            <td class="action-btns">
-                                <button class="outline" style="padding: 4px 8px; font-size: 11px;" onclick="editMember('${docSnap.id}')">Edit</button>
-                                <button class="danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteMember('${docSnap.id}')">Delete</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (error) { console.error(error); }
-        };
-
-        window.deleteMember = async (emailId) => {
-            if(confirm("Are you sure you want to remove this member? This will delete their team access.")) {
-                try { await deleteDoc(doc(db, "users", emailId)); loadMembersTable(); } catch (error) { console.error(error); }
-            }
-        };
-
-// ==========================================
-        // SUB PAGE 5: ASSIGN PROJECT LOGIC
-        // ==========================================
-        
-        // We hold these in memory so the table loads instantly without querying the database 100 times
-        window.workspaceTeams = [];
-        window.workspaceMembers = [];
-
-        // 1. Fill the main Project Dropdown
-        window.loadAssignProjectDropdown = async () => {
-            const dropdown = document.getElementById('assign-project-select');
-            dropdown.innerHTML = '<option value="">-- Select a Project --</option>';
-            try {
-                const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((docSnap) => {
-                    dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
-                });
-            } catch (error) { console.error(error); }
-        };
-
-        // 2. Pre-fetch teams and members secretly in the background
-        window.fetchTeamsAndMembers = async () => {
-            window.workspaceTeams = [];
-            window.workspaceMembers = [];
-            try {
-                const teamSnap = await getDocs(collection(db, "teams"));
-                teamSnap.forEach(doc => window.workspaceTeams.push({ id: doc.id, ...doc.data() }));
-
-                const memberSnap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
-                memberSnap.forEach(doc => window.workspaceMembers.push({ email: doc.id, ...doc.data() }));
-            } catch (error) { console.error("Error fetching teams/members:", error); }
-        };
-
-        // 3. Draw the Table when a project is selected
-        window.loadAssignmentTable = async () => {
-            const projectId = document.getElementById('assign-project-select').value;
-            const tbody = document.getElementById('assign-table-body');
-            
-            if (!projectId) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Select a project above...</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Loading tasks...</td></tr>';
-
-            try {
-                const q = query(collection(db, "tasks"), where("projectId", "==", projectId));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No tasks created for this project yet.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = '';
-                
-                // Build the Team options string once to reuse
-                let teamOptions = '<option value="">-- Select Team --</option>';
-                window.workspaceTeams.forEach(t => {
-                    teamOptions += `<option value="${t.id}">${t.name}</option>`;
-                });
-
-                querySnapshot.forEach((docSnap) => {
-                    const task = docSnap.data();
-                    const taskId = docSnap.id;
-                    
-                    // Show a green badge if it is already assigned!
-                    const statusBadge = task.assignedToEmail 
-                        ? `<br><span style="font-size: 11px; color: #10b981; font-weight: bold;">Assigned to: ${task.assignedToName}</span>` 
-                        : `<br><span style="font-size: 11px; color: #ef4444; font-weight: bold;">Unassigned</span>`;
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="font-weight: 500;">${task.description} ${statusBadge}</td>
-                            <td>
-                                <select id="team-select-${taskId}" onchange="updateRowMembers('${taskId}')" style="padding: 6px; font-size: 13px;">
-                                    ${teamOptions}
-                                </select>
-                            </td>
-                            <td>
-                                <select id="member-select-${taskId}" style="padding: 6px; font-size: 13px;">
-                                    <option value="">-- Select Team First --</option>
-                                </select>
-                            </td>
-                            <td>
-                                <button onclick="assignSpecificTask('${taskId}')" style="padding: 6px 10px; font-size: 12px; width: 100%;">Assign</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (error) { console.error("Error loading tasks:", error); }
-        };
-
-        // 4. Dynamic Filtering: When Team is selected, update that row's Member dropdown
-        window.updateRowMembers = (taskId) => {
-            const teamId = document.getElementById(`team-select-${taskId}`).value;
-            const memberDropdown = document.getElementById(`member-select-${taskId}`);
-            
-            memberDropdown.innerHTML = '<option value="">-- Select Member --</option>';
-            if (!teamId) return;
-
-            // Filter our pre-fetched members list by the selected Team ID
-            const filteredMembers = window.workspaceMembers.filter(m => m.teamId === teamId);
-            
-            if (filteredMembers.length === 0) {
-                memberDropdown.innerHTML = '<option value="">-- No members in team --</option>';
-                return;
-            }
-
-            filteredMembers.forEach(m => {
-                memberDropdown.innerHTML += `<option value="${m.email}">${m.name}</option>`;
+            const q = query(collection(db, "users"), where("role", "==", "member"));
+            const snap = await getDocs(q);
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                const m = d.data();
+                tbody.innerHTML += `<tr><td>${m.name}</td><td>${m.teamName}</td><td>${m.email}</td><td><button class="danger" onclick="deleteMember('${d.id}')">Delete</button></td></tr>`;
             });
         };
 
-        // 5. Final Assignment: Push the update to Firebase
-        window.assignSpecificTask = async (taskId) => {
-            const teamId = document.getElementById(`team-select-${taskId}`).value;
-            const memberEmail = document.getElementById(`member-select-${taskId}`).value;
+        window.deleteMember = async (id) => { if(confirm("Delete member?")) { await deleteDoc(doc(db,"users",id)); loadMembersTable(); } };
 
-            if (!teamId || !memberEmail) {
-                return alert("Please select both a Team and a Member to assign this task.");
-            }
-
-            const memberObj = window.workspaceMembers.find(m => m.email === memberEmail);
-            
-            try {
-                // Update the task in the database with the assignee's details
-                await updateDoc(doc(db, "tasks", taskId), {
-                    assignedToEmail: memberEmail,
-                    assignedToName: memberObj.name,
-                    assignedTeamId: teamId,
-                    status: "assigned",
-                    assignedAt: new Date().toISOString()
-                });
-                
-                alert("Task assigned successfully!");
-                loadAssignmentTable(); // Refresh the table to show the new green badge
-            } catch (error) {
-                console.error("Error assigning task:", error);
-                alert("Failed to assign task.");
-            }
+        // SUB PAGE 5 LOGIC
+        window.workspaceTeams = []; window.workspaceMembers = [];
+        window.fetchTeamsAndMembers = async () => {
+            window.workspaceTeams = []; window.workspaceMembers = [];
+            const tSnap = await getDocs(collection(db, "teams"));
+            tSnap.forEach(d => window.workspaceTeams.push({id: d.id, ...d.data()}));
+            const mSnap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
+            mSnap.forEach(d => window.workspaceMembers.push({id: d.id, ...d.data()}));
         };
 
-// ==========================================
-        // SUB PAGE 6: ANALYTICS LOGIC (FIXED)
-        // ==========================================
+        window.loadAssignProjectDropdown = async () => {
+            const dropdown = document.getElementById('assign-project-select');
+            const snap = await getDocs(collection(db, "projects"));
+            dropdown.innerHTML = '<option value="">-- Select Project --</option>';
+            snap.forEach(d => { dropdown.innerHTML += `<option value="${d.id}">${d.data().name}</option>`; });
+        };
 
+        window.loadAssignmentTable = async () => {
+            const pid = document.getElementById('assign-project-select').value;
+            const tbody = document.getElementById('assign-table-body');
+            if(!pid) return;
+            const q = query(collection(db, "tasks"), where("projectId", "==", pid));
+            const snap = await getDocs(q);
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                const t = d.data();
+                tbody.innerHTML += `<tr><td>${t.description}</td>
+                <td><select id="team-${d.id}" onchange="updateRowMembers('${d.id}')">
+                    <option value="">-- Team --</option>
+                    ${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}
+                </select></td>
+                <td><select id="member-${d.id}"><option value="">-- Select --</option></select></td>
+                <td><button onclick="assignTask('${d.id}')">Assign</button></td></tr>`;
+            });
+        };
+
+        window.updateRowMembers = (tid) => {
+            const teamId = document.getElementById(`team-${tid}`).value;
+            const mSelect = document.getElementById(`member-${tid}`);
+            const filtered = window.workspaceMembers.filter(m => m.teamId === teamId);
+            mSelect.innerHTML = filtered.map(m => `<option value="${m.email}">${m.name}</option>`).join('');
+        };
+
+        window.assignTask = async (tid) => {
+            const eid = document.getElementById(`member-${tid}`).value;
+            if(!eid) return alert("Select member");
+            await updateDoc(doc(db, "tasks", tid), { assignedToEmail: eid, status: "assigned" });
+            alert("Assigned"); loadAssignmentTable();
+        };
+
+        // SUB PAGE 6 LOGIC
         window.runAnalytics = async () => {
-            const projProgressContainer = document.getElementById('project-progress-container');
-            const teamTableBody = document.getElementById('analytics-team-body');
-            
-            // Set initial loading states
-            projProgressContainer.innerHTML = '<p style="color: #94a3b8;">Calculating project progress...</p>';
-            teamTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading team data...</td></tr>';
-            
-            try {
-                // 1. Fetch all data in parallel for speed
-                const [pSnap, tSnap, teamSnap, memberSnap] = await Promise.all([
-                    getDocs(collection(db, "projects")),
-                    getDocs(collection(db, "tasks")),
-                    getDocs(collection(db, "teams")),
-                    getDocs(query(collection(db, "users"), where("role", "==", "member")))
-                ]);
+            const pSnap = await getDocs(collection(db, "projects"));
+            const tSnap = await getDocs(collection(db, "tasks"));
+            const teamSnap = await getDocs(collection(db, "teams"));
+            const mSnap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
 
-                // 2. Update Top Metric Cards immediately
-                document.getElementById('stat-projects').innerText = pSnap.size || 0;
-                document.getElementById('stat-teams').innerText = teamSnap.size || 0;
-                document.getElementById('stat-members').innerText = memberSnap.size || 0;
+            document.getElementById('stat-projects').innerText = pSnap.size;
+            document.getElementById('stat-teams').innerText = teamSnap.size;
+            document.getElementById('stat-members').innerText = mSnap.size;
 
-                // 3. Process Project Progress Bars
-                projProgressContainer.innerHTML = '';
-                if (pSnap.empty) {
-                    projProgressContainer.innerHTML = '<p style="color: #94a3b8; font-size: 14px;">No projects created yet.</p>';
-                } else {
-                    pSnap.forEach(projDoc => {
-                        const project = projDoc.data();
-                        const projectId = projDoc.id;
-                        
-                        const projectTasks = [];
-                        tSnap.forEach(tDoc => { 
-                            if(tDoc.data().projectId === projectId) projectTasks.push(tDoc.data()); 
-                        });
+            const container = document.getElementById('project-progress-container');
+            container.innerHTML = '';
+            pSnap.forEach(d => {
+                const pid = d.id;
+                const ptasks = [];
+                tSnap.forEach(ts => { if(ts.data().projectId === pid) ptasks.push(ts.data()); });
+                const total = ptasks.length;
+                const done = ptasks.filter(t => t.status === 'completed').length;
+                const perc = total > 0 ? Math.round((done/total)*100) : 0;
+                container.innerHTML += `<div style="margin-bottom:10px;"><strong>${d.data().name}</strong>: ${perc}%<div style="width:100%; background:#eee; height:10px;"><div style="width:${perc}%; background:blue; height:10px;"></div></div></div>`;
+            });
 
-                        const total = projectTasks.length;
-                        // For now, all tasks are "to-do", so completed is 0
-                        const completed = projectTasks.filter(t => t.status === 'completed').length;
-                        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-                        projProgressContainer.innerHTML += `
-                            <div style="background: var(--surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom:10px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
-                                    <strong>${project.name}</strong>
-                                    <span>${percentage}% (${completed}/${total} Tasks)</span>
-                                </div>
-                                <div style="width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden;">
-                                    <div style="width: ${percentage}%; background: var(--primary); height: 100%; transition: width 0.5s ease;"></div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-
-                // 4. Process Team Workload Table
-                teamTableBody.innerHTML = '';
-                if (teamSnap.empty) {
-                    teamTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No teams found.</td></tr>';
-                } else {
-                    teamSnap.forEach(teamDoc => {
-                        const team = teamDoc.data();
-                        const teamId = teamDoc.id;
-                        
-                        let taskCount = 0;
-                        tSnap.forEach(tDoc => { 
-                            if(tDoc.data().assignedTeamId === teamId) taskCount++; 
-                        });
-
-                        const statusTag = taskCount > 5 
-                            ? '<span style="color: #ef4444; font-weight:bold;">Overloaded</span>' 
-                            : (taskCount > 0 ? '<span style="color: #10b981; font-weight:bold;">Active</span>' : '<span style="color: #94a3b8;">Available</span>');
-
-                        teamTableBody.innerHTML += `
-                            <tr>
-                                <td style="font-weight: 500;">${team.name}</td>
-                                <td>${taskCount} Task(s) Assigned</td>
-                                <td>${statusTag}</td>
-                            </tr>
-                        `;
-                    } );
-                }
-
-            } catch (error) { 
-                console.error("Analytics Error Details:", error);
-                projProgressContainer.innerHTML = '<p style="color: #ef4444;">Error loading data. Check console for details.</p>';
-            }
+            const tBody = document.getElementById('analytics-team-body');
+            tBody.innerHTML = '';
+            teamSnap.forEach(d => {
+                let count = 0;
+                tSnap.forEach(ts => { if(ts.data().assignedTeamId === d.id) count++; });
+                tBody.innerHTML += `<tr><td>${d.data().name}</td><td>${count}</td><td>Active</td></tr>`;
+            });
         };
+    </script>
 </body>
 </html>
