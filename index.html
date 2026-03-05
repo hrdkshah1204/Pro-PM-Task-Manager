@@ -49,10 +49,10 @@
 <body>
 
     <div id="login-view">
-        <h1>ProPM</h1>
-        <p style="color: #64748b; margin-bottom: 20px;">Sign in to your workspace.</p>
+        <h1 id="auth-title">ProPM</h1>
+        <p id="auth-subtitle" style="color: #64748b; margin-bottom: 20px;">Sign in to your workspace.</p>
         
-        <div style="text-align: left; margin-bottom: 20px;">
+        <div style="text-align: left; margin-bottom: 10px;">
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" id="login-email" placeholder="email@example.com">
@@ -61,14 +61,20 @@
                 <label>Password</label>
                 <input type="password" id="login-password" placeholder="••••••••">
             </div>
-            <button onclick="signInWithEmail()" style="width: 100%; margin-top: 15px;">Sign In</button>
+            
+            <button id="btn-primary-auth" onclick="signInWithEmail()" style="width: 100%; margin-top: 15px;">Sign In</button>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <button class="outline" id="btn-toggle-auth" onclick="toggleAuthMode()" style="flex: 1; margin-right: 5px; padding: 8px; font-size: 12px;">Create Account</button>
+                <button class="outline" onclick="forgotPassword()" style="flex: 1; margin-left: 5px; padding: 8px; font-size: 12px;">Forgot Password?</button>
+            </div>
         </div>
 
-        <div style="margin: 20px 0; color: #cbd5e1; display: flex; align-items: center; gap: 10px;">
+        <div id="google-auth-divider" style="margin: 20px 0; color: #cbd5e1; display: flex; align-items: center; gap: 10px;">
             <hr style="flex:1; border:0; border-top:1px solid #e2e8f0;"> or <hr style="flex:1; border:0; border-top:1px solid #e2e8f0;">
         </div>
 
-        <button class="outline" onclick="signIn()" style="width: 100%;">Continue with Google</button>
+        <button class="outline" id="btn-google" onclick="signIn()" style="width: 100%;">Continue with Google</button>
         
         <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444;"></p>
     </div>
@@ -240,7 +246,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import {getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -258,15 +266,69 @@
         const provider = new GoogleAuthProvider();
 	provider.setCustomParameters({prompt: 'select_account'});
 
-	// Manual Email Sign In
+	let isRegistrationMode = false;
+
+        // Toggle between Sign In and Create Account UI
+        window.toggleAuthMode = () => {
+            isRegistrationMode = !isRegistrationMode;
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            const primaryBtn = document.getElementById('btn-primary-auth');
+            const toggleBtn = document.getElementById('btn-toggle-auth');
+            
+            if (isRegistrationMode) {
+                title.innerText = "Join ProPM";
+                subtitle.innerText = "Create your new member account.";
+                primaryBtn.innerText = "Register Now";
+                primaryBtn.setAttribute("onclick", "registerUser()");
+                toggleBtn.innerText = "Back to Login";
+            } else {
+                title.innerText = "ProPM";
+                subtitle.innerText = "Sign in to your workspace.";
+                primaryBtn.innerText = "Sign In";
+                primaryBtn.setAttribute("onclick", "signInWithEmail()");
+                toggleBtn.innerText = "Create Account";
+            }
+        };
+
+        // Manual Email Sign In
         window.signInWithEmail = () => {
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
             if(!email || !pass) return alert("Please enter both email and password.");
-            
             signInWithEmailAndPassword(auth, email, pass)
-                .catch(err => document.getElementById('auth-status').innerText = "Invalid credentials or user does not exist.");
+                .catch(err => document.getElementById('auth-status').innerText = "Access Denied: Invalid credentials.");
         };
+
+
+
+       // PLACE THE NEW CODE HERE:
+        window.registerUser = () => {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            if(!email || pass.length < 6) return alert("Enter a valid email and password (min 6 characters).");
+
+            createUserWithEmailAndPassword(auth, email, pass)
+                .then((userCredential) => {
+                    // This triggers the Welcome/Verification email
+                    sendEmailVerification(userCredential.user); 
+                    alert("Account created! A welcome/verification email has been sent to your inbox.");
+                })
+                .catch(err => {
+                    document.getElementById('auth-status').innerText = "Registration failed: " + err.message;
+                });
+        };
+
+        // NEW: Forgot Password logic
+        window.forgotPassword = () => {
+            const email = document.getElementById('login-email').value;
+            if(!email) return alert("Please enter your email address first.");
+
+            sendPasswordResetEmail(auth, email)
+                .then(() => { alert("Password reset email sent! Check your inbox."); })
+                .catch(err => { document.getElementById('auth-status').innerText = "Error: " + err.message; });
+        };
+
         window.signIn = () => signInWithPopup(auth, provider).catch(err => alert(err.message));
         window.signOutUser = () => signOut(auth);
 
@@ -332,12 +394,12 @@
             const snap = await getDocs(query(collection(db, "projects"), orderBy("createdAt", "desc")));
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate || 'N/A'}</td>
-        	//<select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
-       		  //<option value="active" ${d.data().status==='active'?'selected':''}>Active</option>
-        	  //<option value="on-hold" ${d.data().status==='on-hold'?'selected':''}>On Hold</option>
-         	  //<option value="completed" ${d.data().status==='completed'?'selected':''}>Completed</option>
-        	//</select>
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate || 'N/A'}</td>td>
+        	<select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
+       		  <option value="active" ${d.data().status==='active'?'selected':''}>Active</option>
+        	  <option value="on-hold" ${d.data().status==='on-hold'?'selected':''}>On Hold</option>
+         	  <option value="completed" ${d.data().status==='completed'?'selected':''}>Completed</option>
+        	</select>
     </td>
 
 <td class="action-btns"><button class="outline" onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Delete</button></td></tr>`);
@@ -601,5 +663,3 @@
     </script>
 </body>
 </html>
-
-
