@@ -182,8 +182,31 @@
                 </table>
             </div>
 
-            <div id="sub2" class="sub-page hidden"><h3>Create Tasks</h3><select id="t-project-id"></select><input type="text" id="t-desc"><button onclick="saveTask()">Save</button><tbody id="tasks-table-body"></tbody></div>
-            <div id="sub3" class="sub-page hidden"><h3>Add Teams</h3><input type="text" id="team-name"><button onclick="saveTeam()">Save</button><tbody id="team-table-body"></tbody></div>
+            <div id="sub2" class="sub-page hidden">
+                <h3>Create Tasks</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Select Project</label><select id="t-project-id"></select></div>
+                    <div class="form-group" style="flex: 2;"><label>Create task</label><input type="text" id="t-desc" placeholder="Enter task description..."></div>
+                </div>
+                <button onclick="saveTask()">Save Task</button>
+                <span id="t-status"></span>
+                <table id="tasks-table">
+                    <thead><tr><th style="width: 30px;"></th><th>Project Name</th><th>Total Tasks</th></tr></thead>
+                    <tbody id="tasks-table-body"></tbody>
+                </table>
+            </div>
+
+            <div id="sub3" class="sub-page hidden">
+                <h3>Add Teams</h3>
+                <div class="form-row" style="align-items: flex-end;">
+                    <div class="form-group" style="flex: 3;"><label>Team Name</label><input type="text" id="team-name"></div>
+                    <div style="flex: 1;"><button onclick="saveTeam()" style="width: 100%;">Save Team</button></div>
+                </div>
+                <table>
+                    <thead><tr><th>Team Name</th><th>Actions</th></tr></thead>
+                    <tbody id="team-table-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -430,7 +453,24 @@
             });
         };
         // Unused logic stubs to avoid errors
-        window.saveTask = async () => {}; window.saveTeam = async () => {};
+        // --- SUB PAGE 2: TASKS LOGIC ---
+        window.saveTask = async () => {
+            const pid = document.getElementById('t-project-id').value;
+            const desc = document.getElementById('t-desc').value;
+            if(!pid || !desc) return alert("Select project and enter description.");
+            await addDoc(collection(db, "tasks"), { projectId: pid, description: desc, status: "to-do", createdAt: new Date().toISOString() });
+            document.getElementById('t-desc').value = '';
+            loadTasksTable();
+        };
+
+        // --- SUB PAGE 3: TEAMS LOGIC ---
+        window.saveTeam = async () => {
+            const name = document.getElementById('team-name').value.trim();
+            if(!name) return alert("Enter team name.");
+            await addDoc(collection(db, "teams"), { name: name, createdAt: new Date().toISOString() });
+            document.getElementById('team-name').value = '';
+            loadTeamsTable();
+        };
     </script>
 </body>
 </html>
