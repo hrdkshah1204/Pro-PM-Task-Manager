@@ -177,17 +177,13 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        // Added updateDoc and where back into the imports!
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration
-            const firebaseConfig = {
-            apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
-            authDomain: "pm-pro-80c67.firebaseapp.com",
-            projectId: "pm-pro-80c67",
-            storageBucket: "pm-pro-80c67.firebasestorage.app",
-            messagingSenderId: "553036723851",
-            appId: "1:553036723851:web:3167a4def993500c39468e"
+        // *** PASTE YOUR FIREBASE KEYS HERE ***
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID"
         };
 
         const app = initializeApp(firebaseConfig);
