@@ -333,11 +333,11 @@
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '';
             snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate || 'N/A'}</td>
-        	<select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
-       		  <option value="active" ${d.data().status==='active'?'selected':''}>Active</option>
-        	  <option value="on-hold" ${d.data().status==='on-hold'?'selected':''}>On Hold</option>
-         	  <option value="completed" ${d.data().status==='completed'?'selected':''}>Completed</option>
-        	</select>
+        	//<select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
+       		  //<option value="active" ${d.data().status==='active'?'selected':''}>Active</option>
+        	  //<option value="on-hold" ${d.data().status==='on-hold'?'selected':''}>On Hold</option>
+         	  //<option value="completed" ${d.data().status==='completed'?'selected':''}>Completed</option>
+        	//</select>
     </td>
 
 <td class="action-btns"><button class="outline" onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Delete</button></td></tr>`);
@@ -601,4 +601,5 @@
     </script>
 </body>
 </html>
+
 
