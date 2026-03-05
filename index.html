@@ -285,7 +285,10 @@ const firebaseConfig = {
             if(pageId === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
         };
 
-        // --- SUB PAGE 1: CREATE PROJECT ---
+       // ==========================================
+        // SUB PAGE 1: CREATE PROJECT LOGIC
+        // ==========================================
+
         window.saveProject = async () => {
             const nameInput = document.getElementById('p-name');
             const name = nameInput.value.trim();
@@ -294,9 +297,13 @@ const firebaseConfig = {
             const status = document.getElementById('p-status');
             const editId = document.getElementById('edit-project-id').value;
 
-            if (!name || !date || !desc) return alert("Please fill out all project fields.");
+            if (!name || !date || !desc) {
+                return alert("Please fill out all project fields.");
+            }
 
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
+            status.style.display = 'inline'; 
+            status.style.color = '#64748b'; 
+            status.innerText = "Checking...";
 
             try {
                 // Popup Duplicate Checker
@@ -305,8 +312,10 @@ const firebaseConfig = {
                 
                 let isDuplicate = false;
                 dupSnap.forEach((docSnap) => {
-                    // It's only a duplicate if the names match AND it's a different project ID
-                    if (docSnap.id !== editId) isDuplicate = true;
+                    // It is only a duplicate if the names match AND we are not currently editing this exact project
+                    if (docSnap.id !== editId) {
+                        isDuplicate = true;
+                    }
                 });
 
                 if (isDuplicate) {
@@ -320,11 +329,20 @@ const firebaseConfig = {
                 
                 if (editId) {
                     // Update Mode
-                    await updateDoc(doc(db, "projects", editId), { name, endDate: date, description: desc });
+                    await updateDoc(doc(db, "projects", editId), { 
+                        name: name, 
+                        endDate: date, 
+                        description: desc 
+                    });
                     status.innerText = "Updated!";
                 } else {
                     // Create Mode
-                    await addDoc(collection(db, "projects"), { name, endDate: date, description: desc, createdAt: new Date().toISOString() });
+                    await addDoc(collection(db, "projects"), { 
+                        name: name, 
+                        endDate: date, 
+                        description: desc, 
+                        createdAt: new Date().toISOString() 
+                    });
                     status.innerText = "Saved!";
                 }
                 
@@ -333,7 +351,12 @@ const firebaseConfig = {
                 
                 cancelEdit();
                 loadProjectsTable(); 
-            } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
+            } catch (error) { 
+                console.error("Error saving project:", error); 
+                status.style.color = '#ef4444'; 
+                status.innerText = "Error saving."; 
+                setTimeout(() => status.style.display = 'none', 3000);
+            }
         };
 
         window.loadProjectsTable = async () => {
@@ -342,7 +365,11 @@ const firebaseConfig = {
             try {
                 const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
                 const querySnapshot = await getDocs(q);
-                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
+                
+                if (querySnapshot.empty) { 
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; 
+                    return; 
+                }
 
                 tbody.innerHTML = '';
                 querySnapshot.forEach((docSnap) => {
@@ -359,7 +386,49 @@ const firebaseConfig = {
                         </tr>
                     `;
                 });
-            } catch (error) { console.error(error); }
+            } catch (error) { 
+                console.error("Error loading projects table:", error); 
+            }
+        };
+
+        window.editProject = async (id) => {
+            try {
+                const docSnap = await getDoc(doc(db, "projects", id));
+                if (docSnap.exists()) {
+                    const p = docSnap.data();
+                    document.getElementById('p-name').value = p.name;
+                    document.getElementById('p-date').value = p.endDate;
+                    document.getElementById('p-desc').value = p.description;
+                    
+                    document.getElementById('edit-project-id').value = id;
+                    document.getElementById('btn-save-project').innerText = "Update Project";
+                    document.getElementById('btn-cancel-edit').classList.remove('hidden');
+                    
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) { 
+                console.error("Error fetching project details:", error); 
+            }
+        };
+
+        window.cancelEdit = () => {
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-date').value = '';
+            document.getElementById('p-desc').value = '';
+            document.getElementById('edit-project-id').value = '';
+            document.getElementById('btn-save-project').innerText = "Save Project";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        };
+
+        window.deleteProject = async (id) => {
+            if(confirm("Are you sure you want to delete this project? This cannot be undone.")) {
+                try { 
+                    await deleteDoc(doc(db, "projects", id)); 
+                    loadProjectsTable(); 
+                } catch (error) { 
+                    console.error("Error deleting project:", error); 
+                }
+            }
         };
 
 
@@ -676,3 +745,4 @@ window.editProject = async (id) => {
     </script>
 </body>
 </html>
+
