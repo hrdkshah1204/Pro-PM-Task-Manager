@@ -332,7 +332,7 @@
             const snap = await getDocs(query(collection(db, "projects"), orderBy("createdAt", "desc")));
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate || 'N/A'}</td>td>
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate || 'N/A'}</td>
         	<select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
        		  <option value="active" ${d.data().status==='active'?'selected':''}>Active</option>
         	  <option value="on-hold" ${d.data().status==='on-hold'?'selected':''}>On Hold</option>
@@ -601,3 +601,4 @@
     </script>
 </body>
 </html>
+
