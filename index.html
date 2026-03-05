@@ -60,6 +60,45 @@
         <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444;"></p>
     </div>
 
+<div id="onboarding-view" class="hidden" style="max-width: 500px; margin: 5vh auto; background: var(--surface); padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border: 1px solid var(--border);">
+        <h2 style="text-align: center; margin-bottom: 10px;">Setup Your Workspace</h2>
+        <p style="text-align: center; color: #64748b; margin-bottom: 30px; font-size: 14px;">Tell us a bit about your business to get started.</p>
+        
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>Full Name</label>
+            <input type="text" id="ob-name" placeholder="Enter your name">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>Company Name</label>
+            <input type="text" id="ob-company" placeholder="e.g. Acme Corp">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>Your Designation</label>
+            <input type="text" id="ob-role" placeholder="e.g. Project Manager">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>Company Business</label>
+            <select id="ob-business">
+                <option value="">-- Select Industry --</option>
+                <option value="it">IT & Software</option>
+                <option value="construction">Construction</option>
+                <option value="education">Education</option>
+                <option value="marketing">Marketing/Agency</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 25px;">
+            <label>Estimated Team Size</label>
+            <select id="ob-size">
+                <option value="1-5">1 - 5 members</option>
+                <option value="6-20">6 - 20 members</option>
+                <option value="21-50">21 - 50 members</option>
+                <option value="50+">50+ members</option>
+            </select>
+        </div>
+        
+        <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
+    </div>
     <div id="admin-view" class="hidden">
         
         <div class="sidebar">
@@ -313,24 +352,61 @@ const firebaseConfig = {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('login-view').classList.add('hidden');
-                document.querySelectorAll('.user-name').forEach(el => el.innerText = user.displayName);
                 
+                // Check if user has already completed onboarding
                 const userSnap = await getDoc(doc(db, "users", user.email));
-                if (userSnap.exists() && userSnap.data().role === 'admin') {
-                    document.getElementById('admin-view').classList.remove('hidden');
-                    loadProjectsTable(); 
-                } else if (!userSnap.exists()) {
-                    await setDoc(doc(db, "users", user.email), { name: user.displayName, email: user.email, role: "member" });
-                    document.getElementById('member-view').classList.remove('hidden');
+                
+                if (userSnap.exists() && userSnap.data().onboardingComplete) {
+                    // If they are an admin, show admin console
+                    if (userSnap.data().role === 'admin') {
+                        document.getElementById('admin-view').classList.remove('hidden');
+                        document.getElementById('onboarding-view').classList.add('hidden');
+                        loadProjectsTable();
+                    } else {
+                        document.getElementById('member-view').classList.remove('hidden');
+                    }
                 } else {
-                    document.getElementById('member-view').classList.remove('hidden');
+                    // Force Onboarding
+                    document.getElementById('onboarding-view').classList.remove('hidden');
+                    document.getElementById('ob-name').value = user.displayName; // Pre-fill name
                 }
             } else {
                 document.getElementById('login-view').classList.remove('hidden');
                 document.getElementById('admin-view').classList.add('hidden');
-                document.getElementById('member-view').classList.add('hidden');
+                document.getElementById('onboarding-view').classList.add('hidden');
             }
         });
+
+        window.completeOnboarding = async () => {
+            const user = auth.currentUser;
+            const name = document.getElementById('ob-name').value;
+            const company = document.getElementById('ob-company').value;
+            const role = document.getElementById('ob-role').value;
+            const business = document.getElementById('ob-business').value;
+            const size = document.getElementById('ob-size').value;
+
+            if(!name || !company || !role || !business) return alert("Please fill all details.");
+
+            try {
+                await setDoc(doc(db, "users", user.email), {
+                    name: name,
+                    email: user.email,
+                    companyName: company,
+                    designation: role,
+                    businessType: business,
+                    teamSize: size,
+                    role: 'admin', // First person signing up is the Admin
+                    onboardingComplete: true,
+                    createdAt: new Date().toISOString()
+                }, { merge: true });
+
+                alert("Workspace created successfully!");
+                location.reload(); // Refresh to trigger the gated access
+            } catch (err) {
+                console.error(err);
+                alert("Error saving profile.");
+            }
+        };
 
         // --- NAVIGATION LOGIC ---
         window.navTo = (pageId) => {
