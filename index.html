@@ -260,16 +260,47 @@ const firebaseConfig = {
         // ==========================================
         
         window.saveProject = async () => {
-            const name = document.getElementById('p-name').value;
+            const nameInput = document.getElementById('p-name');
+            const name = nameInput.value.trim(); 
             const date = document.getElementById('p-date').value;
-            const desc = document.getElementById('p-desc').value;
+            const desc = document.getElementById('p-desc').value.trim();
             const status = document.getElementById('p-status');
             const editId = document.getElementById('edit-project-id').value;
 
-            if (!name || !date || !desc) return alert("Please fill out all project fields.");
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Saving...";
+            if (!name || !date || !desc) {
+                alert("Please fill out all project fields."); 
+                return;
+            }
+
+            status.style.display = 'inline'; 
+            status.style.color = '#64748b'; 
+            status.innerText = "Checking...";
 
             try {
+                // Check for duplicates
+                const duplicateQuery = query(collection(db, "projects"), where("name", "==", name));
+                const duplicateSnapshot = await getDocs(duplicateQuery);
+                
+                let isDuplicate = false;
+                duplicateSnapshot.forEach((docSnap) => {
+                    if (docSnap.id !== editId) isDuplicate = true;
+                });
+
+                if (isDuplicate) {
+                    // Hide the "Checking..." text
+                    status.style.display = 'none'; 
+                    
+                    // NEW FIX: Show a clear popup to the user
+                    alert(`Wait! A project with the name "${name}" already exists.\n\nPlease modify the name and try again.`);
+                    
+                    // Automatically put the cursor back in the box for them to fix it
+                    nameInput.focus(); 
+                    
+                    return; // Stop the save process
+                }
+
+                status.innerText = "Saving...";
+
                 if (editId) {
                     await updateDoc(doc(db, "projects", editId), { name: name, endDate: date, description: desc });
                     status.innerText = "Updated!";
@@ -283,45 +314,11 @@ const firebaseConfig = {
                 
                 cancelEdit(); 
                 loadProjectsTable(); 
-            } catch (error) { console.error(error); }
-        };
-
-        window.loadProjectsTable = async () => {
-            const tbody = document.getElementById('project-table-body');
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Loading...</td></tr>';
-            try {
-                const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
-
-                tbody.innerHTML = '';
-                querySnapshot.forEach((docSnap) => {
-                    const p = docSnap.data();
-                    tbody.innerHTML += `<tr><td style="font-weight: 500;">${p.name}</td><td>${p.endDate}</td><td class="action-btns"><button class="outline" style="padding: 6px 10px; font-size: 12px;" onclick="editProject('${docSnap.id}')">Edit</button><button class="danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteProject('${docSnap.id}')">Delete</button></td></tr>`;
-                });
-            } catch (error) { console.error(error); }
-        };
-
-        window.editProject = async (id) => {
-            try {
-                const docSnap = await getDoc(doc(db, "projects", id));
-                if (docSnap.exists()) {
-                    const p = docSnap.data();
-                    document.getElementById('p-name').value = p.name; document.getElementById('p-date').value = p.endDate; document.getElementById('p-desc').value = p.description;
-                    document.getElementById('edit-project-id').value = id; document.getElementById('btn-save-project').innerText = "Update Project"; document.getElementById('btn-cancel-edit').classList.remove('hidden');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            } catch (error) { console.error(error); }
-        };
-
-        window.cancelEdit = () => {
-            document.getElementById('p-name').value = ''; document.getElementById('p-date').value = ''; document.getElementById('p-desc').value = '';
-            document.getElementById('edit-project-id').value = ''; document.getElementById('btn-save-project').innerText = "Save Project"; document.getElementById('btn-cancel-edit').classList.add('hidden');
-        };
-
-        window.deleteProject = async (id) => {
-            if(confirm("Are you sure you want to delete this project?")) {
-                try { await deleteDoc(doc(db, "projects", id)); loadProjectsTable(); } catch (error) { console.error(error); }
+            } catch (error) { 
+                console.error(error); 
+                status.style.color = '#ef4444'; 
+                status.innerText = "Error saving."; 
+                setTimeout(() => status.style.display = 'none', 3000);
             }
         };
 
@@ -553,3 +550,4 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
+
