@@ -156,7 +156,55 @@
                 </table>
             </div>
 
-            <div id="sub4" class="sub-page hidden"><h3>Add Members (Coming Soon)</h3></div>
+            <div id="sub4" class="sub-page hidden">
+                <h3>Add Team Members</h3>
+                <p style="font-size: 13px; color: #64748b;">Register colleagues and assign them to your teams.</p>
+                
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Name</label>
+                        <input type="text" id="m-name" maxlength="1200" placeholder="Full Name">
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <label>Email Address</label>
+                        <input type="email" id="m-email" maxlength="300" placeholder="user@gmail.com">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Phone Number</label>
+                        <input type="text" id="m-phone" maxlength="13" placeholder="+1234567890">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Select Team</label>
+                        <select id="m-team-id">
+                            <option value="">-- Loading Teams... --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
+                        <button onclick="saveMember()" style="width: 100%;">Save Member</button>
+                    </div>
+                </div>
+                <span id="m-status" style="margin-left: 5px; font-size: 13px; display: none;"></span>
+
+                <h3 style="margin-top: 40px;">Registered Team Members</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Team Assigned</th>
+                            <th>Email Address</th>
+                            <th>Phone Number</th>
+                            <th style="width: 120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-table-body">
+                        <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading members...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
             <div id="sub5" class="sub-page hidden"><h3>Assign Project (Coming Soon)</h3></div>
             <div id="sub6" class="sub-page hidden"><h3>Analytics (Coming Soon)</h3></div>
 
@@ -226,6 +274,7 @@
             // Trigger table loads when navigating
             if(pageId === 'sub2') { loadProjectDropdown(); loadTasksTable(); }
             if(pageId === 'sub3') { loadTeamsTable(); }
+            if(pageId === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
         };
 
         // --- SUB PAGE 1: CREATE PROJECT ---
@@ -417,6 +466,124 @@
         window.deleteTeam = async (id) => {
             if(confirm("Are you sure you want to delete this team?")) {
                 try { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } catch (error) { console.error(error); }
+            }
+        };
+
+// --- SUB PAGE 4: ADD MEMBERS ---
+        
+        // Fill the Team Dropdown
+        window.loadTeamDropdownForMembers = async () => {
+            const dropdown = document.getElementById('m-team-id');
+            dropdown.innerHTML = '<option value="">-- Select a Team --</option>';
+            try {
+                const q = query(collection(db, "teams"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach((docSnap) => {
+                    dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // Save the Member
+        window.saveMember = async () => {
+            const name = document.getElementById('m-name').value.trim();
+            const email = document.getElementById('m-email').value.trim().toLowerCase();
+            const phone = document.getElementById('m-phone').value.trim();
+            const teamDropdown = document.getElementById('m-team-id');
+            const teamId = teamDropdown.value;
+            const status = document.getElementById('m-status');
+
+            if (!name || !email || !phone || !teamId) {
+                return alert("Please fill out all fields and select a team.");
+            }
+
+            // Get the actual text name of the team from the dropdown
+            const teamName = teamDropdown.options[teamDropdown.selectedIndex].text;
+
+            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
+
+            try {
+                // Duplicate Checker: See if this email is already registered
+                const userRef = doc(db, "users", email);
+                const userSnap = await getDoc(userRef);
+
+                if (userSnap.exists()) {
+                    if (userSnap.data().role === 'admin') {
+                        status.style.display = 'none';
+                        return alert("Wait! You cannot assign an Admin to a specific team here.");
+                    }
+                    if (userSnap.data().teamId) {
+                        status.style.display = 'none';
+                        return alert(`Wait! The email "${email}" is already registered to a team.\n\nPlease use a different email or delete their existing record.`);
+                    }
+                }
+
+                status.innerText = "Saving...";
+                
+                // Save using 'setDoc' so their Email is their specific Database ID
+                await setDoc(doc(db, "users", email), {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    teamId: teamId,
+                    teamName: teamName,
+                    role: "member",
+                    registeredAt: new Date().toISOString()
+                }, { merge: true }); 
+                
+                status.style.color = '#10b981'; status.innerText = "Saved!";
+                
+                // Clear the form
+                document.getElementById('m-name').value = '';
+                document.getElementById('m-email').value = '';
+                document.getElementById('m-phone').value = '';
+                document.getElementById('m-team-id').value = '';
+                
+                setTimeout(() => status.style.display = 'none', 3000);
+                loadMembersTable(); 
+            } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
+        };
+
+        // Draw the Member Table
+        window.loadMembersTable = async () => {
+            const tbody = document.getElementById('member-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading members...</td></tr>';
+            try {
+                // Only fetch users who have the role of "member"
+                const q = query(collection(db, "users"), where("role", "==", "member"));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) { 
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No members found.</td></tr>'; 
+                    return; 
+                }
+
+                tbody.innerHTML = '';
+                querySnapshot.forEach((docSnap) => {
+                    const m = docSnap.data();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: 500;">${m.name || 'N/A'}</td>
+                            <td><span style="background: #e0e7ff; color: #2563eb; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">${m.teamName || 'Unassigned'}</span></td>
+                            <td>${m.email}</td>
+                            <td>${m.phone || 'N/A'}</td>
+                            <td class="action-btns">
+                                <button class="outline" style="padding: 4px 8px; font-size: 11px;" onclick="alert('Edit coming soon')">Edit</button>
+                                <button class="danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteMember('${docSnap.id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // Delete Member
+        window.deleteMember = async (emailId) => {
+            if(confirm("Are you sure you want to remove this member? This will delete their team access.")) {
+                try { 
+                    await deleteDoc(doc(db, "users", emailId)); 
+                    loadMembersTable(); 
+                } catch (error) { console.error(error); }
             }
         };
 
