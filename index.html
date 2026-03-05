@@ -220,21 +220,46 @@ const firebaseConfig = {
             }
         };
 
-        // ==========================================
+       // ==========================================
         // SUB PAGE 1: CREATE PROJECT LOGIC
         // ==========================================
         
         window.saveProject = async () => {
-            const name = document.getElementById('p-name').value;
+            // Added .trim() to prevent " Project A" and "Project A" from both being saved
+            const name = document.getElementById('p-name').value.trim(); 
             const date = document.getElementById('p-date').value;
-            const desc = document.getElementById('p-desc').value;
+            const desc = document.getElementById('p-desc').value.trim();
             const status = document.getElementById('p-status');
             const editId = document.getElementById('edit-project-id').value;
 
-            if (!name || !date || !desc) return alert("Please fill out all project fields.");
-            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Saving...";
+            if (!name || !date || !desc) {
+                alert("Please fill out all project fields."); return;
+            }
+
+            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
 
             try {
+                // NEW: Duplicate Name Check
+                // We ask Firebase for any project that exactly matches the typed name
+                const duplicateQuery = query(collection(db, "projects"), where("name", "==", name));
+                const duplicateSnapshot = await getDocs(duplicateQuery);
+                
+                let isDuplicate = false;
+                duplicateSnapshot.forEach((docSnap) => {
+                    // If a match is found, but it's NOT the project we are currently editing, it's a true duplicate
+                    if (docSnap.id !== editId) {
+                        isDuplicate = true;
+                    }
+                });
+
+                if (isDuplicate) {
+                    status.style.color = '#ef4444'; 
+                    status.innerText = "Error: A project with this name already exists.";
+                    return; // This completely stops the save process
+                }
+
+                status.innerText = "Saving...";
+
                 if (editId) {
                     await updateDoc(doc(db, "projects", editId), { name: name, endDate: date, description: desc });
                     status.innerText = "Updated!";
@@ -248,7 +273,10 @@ const firebaseConfig = {
                 
                 cancelEdit(); 
                 loadProjectsTable(); 
-            } catch (error) { console.error(error); }
+            } catch (error) { 
+                console.error(error); 
+                status.style.color = '#ef4444'; status.innerText = "Error saving."; 
+            }
         };
 
         window.loadProjectsTable = async () => {
@@ -421,3 +449,4 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
+
