@@ -41,7 +41,50 @@
                 <button class="outline" onclick="signOutUser()">Log Out</button>
             </div>
         </div>
-        <p>Your management tools will go here in Step 3.</p>
+        <style>
+            .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+            .admin-module { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+            .admin-module input, .admin-module select { margin-bottom: 10px; }
+        </style>
+
+        <div class="grid-2">
+            <div class="admin-module">
+                <h3>1. Create Project</h3>
+                <input type="text" id="proj-title" placeholder="Project Title (e.g., Grade 8 Curriculum)">
+                <input type="date" id="proj-deadline" title="Deadline">
+                <input type="text" id="proj-notes" placeholder="Brief notes...">
+                <button onclick="createProject()">Save Project</button>
+                <p id="proj-status" style="font-size: 13px; margin-top: 10px; display: none;"></p>
+            </div>
+
+            <div class="admin-module">
+                <h3>2. Add Team Member</h3>
+                <input type="email" id="member-email" placeholder="Colleague's Google Email">
+                <input type="text" id="member-name" placeholder="Full Name">
+                <select id="member-role">
+                    <option value="member">Team Member</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <button onclick="addMember()">Register Member</button>
+                <p id="member-status" style="font-size: 13px; margin-top: 10px; display: none;"></p>
+            </div>
+        </div>
+
+        <div class="admin-module">
+            <h3>3. Assign a Task</h3>
+            <div class="grid-2">
+                <div>
+                    <input type="text" id="task-title" placeholder="Task Description (e.g., Draft Physics Lab)">
+                    <input type="text" id="task-project" placeholder="Project Name (e.g., Grade 8 Curriculum)">
+                </div>
+                <div>
+                    <input type="email" id="task-assignee" placeholder="Assign To (Email Address)">
+                    <button onclick="assignTask()" style="margin-top: 0;">Assign Task</button>
+                    <p id="task-status" style="font-size: 13px; margin-top: 10px; display: none;"></p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="member-view" class="dashboard hidden">
@@ -61,7 +104,7 @@
         // 1. Direct web imports (Bypassing the need for 'npm install')
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
         const firebaseConfig = {
@@ -140,6 +183,74 @@
                 document.getElementById('auth-status').innerText = "";
             }
         });
+
+// --- ADMIN FUNCTIONS ---
+
+        // 1. Save a new Project
+        window.createProject = async () => {
+            const title = document.getElementById('proj-title').value;
+            const deadline = document.getElementById('proj-deadline').value;
+            const notes = document.getElementById('proj-notes').value;
+            const status = document.getElementById('proj-status');
+
+            if (!title) return alert("Please enter a project title.");
+            status.style.display = 'block'; status.style.color = '#64748b'; status.innerText = "Saving...";
+
+            try {
+                await addDoc(collection(db, "projects"), {
+                    title: title, deadline: deadline, notes: notes, createdAt: new Date().toISOString()
+                });
+                status.style.color = '#10b981'; status.innerText = "Project saved!";
+                document.getElementById('proj-title').value = ''; document.getElementById('proj-notes').value = '';
+                setTimeout(() => status.style.display = 'none', 3000);
+            } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error saving project."; }
+        };
+
+        // 2. Register a Team Member
+        window.addMember = async () => {
+            const email = document.getElementById('member-email').value.toLowerCase().trim();
+            const name = document.getElementById('member-name').value;
+            const role = document.getElementById('member-role').value;
+            const status = document.getElementById('member-status');
+
+            if (!email || !name) return alert("Please enter email and name.");
+            status.style.display = 'block'; status.style.color = '#64748b'; status.innerText = "Registering...";
+
+            try {
+                // Use setDoc so their email becomes their exact database ID
+                await setDoc(doc(db, "users", email), {
+                    email: email, name: name, role: role, registeredAt: new Date().toISOString()
+                });
+                status.style.color = '#10b981'; status.innerText = "Member added!";
+                document.getElementById('member-email').value = ''; document.getElementById('member-name').value = '';
+                setTimeout(() => status.style.display = 'none', 3000);
+            } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error adding member."; }
+        };
+
+        // 3. Assign a Task
+        window.assignTask = async () => {
+            const title = document.getElementById('task-title').value;
+            const project = document.getElementById('task-project').value;
+            const assignee = document.getElementById('task-assignee').value.toLowerCase().trim();
+            const statusMsg = document.getElementById('task-status');
+
+            if (!title || !assignee) return alert("Task description and assignee email are required.");
+            statusMsg.style.display = 'block'; statusMsg.style.color = '#64748b'; statusMsg.innerText = "Assigning...";
+
+            try {
+                await addDoc(collection(db, "tasks"), {
+                    title: title,
+                    project: project,
+                    assignedTo: assignee,
+                    status: "to-do", // Default status for new tasks
+                    assignedAt: new Date().toISOString()
+                });
+                statusMsg.style.color = '#10b981'; statusMsg.innerText = "Task assigned!";
+                document.getElementById('task-title').value = '';
+                setTimeout(() => statusMsg.style.display = 'none', 3000);
+            } catch (error) { statusMsg.style.color = '#ef4444'; statusMsg.innerText = "Error assigning task."; }
+        };
+
     </script>
     </body>
 </html>
