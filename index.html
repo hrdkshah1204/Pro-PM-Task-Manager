@@ -201,9 +201,19 @@
                 <h3>Project Progress Status</h3><div id="project-progress-container"></div>
                 <h3 style="margin-top: 30px;">Team Workload Breakdown</h3>
                 <table>
-                    <thead><tr><th>Team Name</th><th>Tasks Assigned</th><th>Workload Status</th></tr></thead>
-                    <tbody id="analytics-team-body"></tbody>
-                </table>
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Total Tasks</th>
+                        <th style="color: #64748b;">To-Do</th>
+                        <th style="color: #2563eb;">In Progress</th>
+                        <th style="color: #10b981;">Completed</th>
+                    </tr>
+                </thead>
+                <tbody id="analytics-team-body">
+                    </tbody>
+            </table>
+
             </div>
         </div>
     </div>
@@ -477,33 +487,95 @@
             const teamId = document.getElementById(`t-${tid}`).value; const filtered = window.workspaceMembers.filter(m => m.teamId === teamId);
             document.getElementById(`m-${tid}`).innerHTML = filtered.map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         };
+        // SUB 5: ASSIGNMENT LOGIC (The specific place to add the code)
         window.assignSpecificTask = async (tid) => {
-            const email = document.getElementById(`m-${tid}`).value; const teamId = document.getElementById(`t-${tid}`).value;
+            const email = document.getElementById(`m-${tid}`).value;
+            const teamId = document.getElementById(`t-${tid}`).value;
+            
+            if (!email || !teamId) return alert("Please select both a Team and a Member.");
+
             const teamName = document.getElementById(`t-${tid}`).options[document.getElementById(`t-${tid}`).selectedIndex].text;
             const member = window.workspaceMembers.find(m => m.email === email);
-            await updateDoc(doc(db, "tasks", tid), { assignedToEmail: email, assignedToName: member.name, assignedTeamName: teamName, assignedTeamId: teamId, status: 'assigned' });
-            loadAssignmentTable();
+
+            try {
+                // THE CODE YOU ASKED ABOUT GOES HERE:
+                await updateDoc(doc(db, "tasks", tid), { 
+                    assignedToEmail: email, 
+                    assignedToName: member.name, 
+                    assignedTeamName: teamName, 
+                    assignedTeamId: teamId, // VITAL: This allows Analytics to count tasks per team
+                    status: 'assigned',
+                    assignedAt: new Date().toISOString()
+                });
+                
+                alert("Task Successfully Allocated!");
+                loadAssignmentTable(); // Refresh the tables to show the update
+            } catch (error) {
+                console.error("Assignment Error:", error);
+                alert("Error assigning task.");
+            }
         };
         window.manualStatusUpdate = async (tid, s) => { await updateDoc(doc(db, "tasks", tid), { status: s }); };
 
         // SUB 6 Logic
-        window.runAnalytics = async () => {
-            const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([getDocs(collection(db, "projects")), getDocs(collection(db, "tasks")), getDocs(collection(db, "teams")), getDocs(query(collection(db, "users"), where("role", "==", "member")))]);
-            document.getElementById('stat-projects').innerText = pSnap.size; document.getElementById('stat-teams').innerText = teamSnap.size; document.getElementById('stat-members').innerText = mSnap.size;
-            const container = document.getElementById('project-progress-container'); container.innerHTML = '';
+       window.runAnalytics = async () => {
+            const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
+                getDocs(collection(db, "projects")), 
+                getDocs(collection(db, "tasks")),
+                getDocs(collection(db, "teams")), 
+                getDocs(query(collection(db, "users"), where("role", "==", "member")))
+            ]);
+
+            // Update Metric Cards
+            document.getElementById('stat-projects').innerText = pSnap.size;
+            document.getElementById('stat-teams').innerText = teamSnap.size;
+            document.getElementById('stat-members').innerText = mSnap.size;
+
+            // 1. Render Project Progress Status Bars
+            const container = document.getElementById('project-progress-container');
+            container.innerHTML = '';
             pSnap.forEach(d => {
                 const ptasks = tSnap.docs.filter(t => t.data().projectId === d.id);
                 const done = ptasks.filter(t => t.data().status === 'completed').length;
-                const perc = ptasks.length > 0 ? Math.round((done/ptasks.length)*100) : 0;
-                container.innerHTML += `<div style="background:white; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${d.data().name}</strong><span>${perc}% Complete</span></div>
-                    <div style="width:100%; background:#f1f5f9; height:10px; border-radius:5px; overflow:hidden;"><div style="width:${perc}%; background:var(--primary); height:10px; transition: width 0.5s ease;"></div></div>
-                </div>`;
+                const perc = ptasks.length > 0 ? Math.round((done / ptasks.length) * 100) : 0;
+                
+                container.innerHTML += `
+                    <div style="background:white; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <strong>${d.data().name}</strong>
+                            <span style="font-size:12px; color:#64748b;">${perc}% Complete (${done}/${ptasks.length} Tasks)</span>
+                        </div>
+                        <div style="width:100%; background:#f1f5f9; height:10px; border-radius:5px; overflow:hidden;">
+                            <div style="width:${perc}%; background:var(--primary); height:10px; border-radius:5px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>`;
             });
-            const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
-            teamSnap.forEach(d => {
-                const count = tSnap.docs.filter(t => t.data().assignedTeamId === d.id).length;
-                tBody.innerHTML += `<tr><td>${d.data().name}</td><td>${count} Task(s)</td><td><span style="color:${count>5?'#ef4444':'#10b981'}; font-weight:bold">${count>5?'Overloaded':'Active'}</span></td></tr>`;
+
+            // 2. Render Team Workload Breakdown (The 5-Column Table)
+            const tBody = document.getElementById('analytics-team-body');
+            tBody.innerHTML = '';
+            
+            teamSnap.forEach(teamDoc => {
+                const teamId = teamDoc.id;
+                const teamData = teamDoc.data();
+                
+                // Filter tasks belonging to this team using the assignedTeamId
+                const teamTasks = tSnap.docs.filter(t => t.data().assignedTeamId === teamId);
+                
+                // Calculate counts for your specific columns
+                const total = teamTasks.length;
+                const todo = teamTasks.filter(t => t.data().status === 'to-do' || t.data().status === 'assigned').length;
+                const inProgress = teamTasks.filter(t => t.data().status === 'in-progress').length;
+                const completed = teamTasks.filter(t => t.data().status === 'completed').length;
+
+                tBody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: 600;">${teamData.name}</td>
+                        <td style="font-weight: bold;">${total}</td>
+                        <td style="color: #64748b;">${todo}</td>
+                        <td style="color: #2563eb; font-weight: 500;">${inProgress}</td>
+                        <td style="color: #10b981; font-weight: 500;">${completed}</td>
+                    </tr>`;
             });
         };
     </script>
