@@ -85,7 +85,7 @@
             <button class="sidebar-btn" onclick="navTo('sub5')">5. Assign Project</button>
             <button class="sidebar-btn" onclick="navTo('sub6')">6. Analytics</button>
             <div style="flex: 1;"></div>
-            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Logged in as: <br><strong class="user-name"></strong></div>
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;"> Logged in as: <br> <strong class="user-name"></strong> </div>
             <button class="outline" onclick="signOutUser()">Log Out</button>
         </div>
 
@@ -111,22 +111,32 @@
             <div id="sub4" class="sub-page hidden">
                 <h3>Add Team Members</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>Name</label><input type="text" id="m-name"></div>
-                    <div class="form-group"><label>Email</label><input type="email" id="m-email"></div>
-                    <div class="form-group"><label>Phone</label><input type="text" id="m-phone"></div>
+                    <div class="form-group"><label>Name</label><input type="text" id="m-name" placeholder="Full Name"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="m-email" placeholder="user@gmail.com"></div>
+                    <div class="form-group"><label>Phone</label><input type="text" id="m-phone" placeholder="+1234567890"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Select Team</label><select id="m-team-id"></select></div>
-                    <div class="form-group" style="display:flex; align-items:flex-end; gap:10px;">
-                        <input type="hidden" id="edit-member-id">
-                        <button id="btn-save-member" onclick="saveMember()" style="flex:1">Save Member</button>
+                    <div class="form-group" style="display: flex; align-items: flex-end; gap: 10px;">
+                        <input type="hidden" id="edit-member-id" value="">
+                        <button id="btn-save-member" onclick="saveMember()" style="flex: 1;">Save Member</button>
                         <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
                     </div>
                 </div>
-                <h3>Registered Team Members</h3>
+
+                <h3 style="margin-top: 30px;">Registered Team Members</h3>
                 <table>
-                    <thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead>
-                    <tbody id="member-table-body"></tbody>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Team Assigned</th>
+                            <th>Email Address</th>
+                            <th>Phone Number</th>
+                            <th style="width: 150px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-table-body">
+                        </tbody>
                 </table>
             </div>
 
@@ -290,14 +300,66 @@
             loadMembersTable();
         };
 
+        // --- UPDATED LOAD MEMBERS TABLE ---
         window.loadMembersTable = async () => {
-            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
             const tbody = document.getElementById('member-table-body');
-            tbody.innerHTML = '';
-            snap.forEach(d => {
-                const m = d.data();
-                tbody.innerHTML += `<tr><td>${m.name}</td><td><span style="background:#e0e7ff; color:#2563eb; padding:4px 8px; border-radius:4px;">${m.teamName}</span></td><td>${m.email}</td><td>${m.phone}</td><td class="action-btns"><button class="danger" onclick="deleteMember('${d.id}')">Delete</button></td></tr>`;
-            });
+            try {
+                const q = query(collection(db, "users"), where("role", "==", "member"));
+                const snap = await getDocs(q);
+                tbody.innerHTML = '';
+                
+                snap.forEach((docSnap) => {
+                    const m = docSnap.data();
+                    const id = docSnap.id;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: 500;">${m.name}</td>
+                            <td><span style="background: #e0e7ff; color: #2563eb; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 11px;">${m.teamName || 'N/A'}</span></td>
+                            <td>${m.email}</td>
+                            <td>${m.phone || 'N/A'}</td>
+                            <td class="action-btns">
+                                <button class="outline" style="padding: 6px 10px; font-size: 11px;" onclick="editMember('${id}')">Edit</button>
+                                <button class="danger" style="padding: 6px 10px; font-size: 11px;" onclick="deleteMember('${id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // --- EDIT MEMBER FUNCTION ---
+        window.editMember = async (id) => {
+            try {
+                const docSnap = await getDoc(doc(db, "users", id));
+                if (docSnap.exists()) {
+                    const m = docSnap.data();
+                    document.getElementById('m-name').value = m.name;
+                    document.getElementById('m-email').value = m.email;
+                    document.getElementById('m-email').disabled = true; // Lock email during edit
+                    document.getElementById('m-email').style.backgroundColor = '#f1f5f9';
+                    document.getElementById('m-phone').value = m.phone || "";
+                    document.getElementById('m-team-id').value = m.teamId;
+
+                    document.getElementById('edit-member-id').value = id;
+                    document.getElementById('btn-save-member').innerText = "Update Member";
+                    document.getElementById('btn-cancel-member').classList.remove('hidden');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) { console.error(error); }
+        };
+
+        // --- CANCEL EDIT FUNCTION ---
+        window.cancelMemberEdit = () => {
+            document.getElementById('m-name').value = '';
+            const emailInput = document.getElementById('m-email');
+            emailInput.value = '';
+            emailInput.disabled = false;
+            emailInput.style.backgroundColor = '#ffffff';
+            document.getElementById('m-phone').value = '';
+            document.getElementById('m-team-id').value = '';
+            document.getElementById('edit-member-id').value = '';
+            document.getElementById('btn-save-member').innerText = "Save Member";
+            document.getElementById('btn-cancel-member').classList.add('hidden');
         };
         window.deleteMember = async (id) => { if(confirm("Remove?")) { await deleteDoc(doc(db,"users",id)); loadMembersTable(); } };
 
