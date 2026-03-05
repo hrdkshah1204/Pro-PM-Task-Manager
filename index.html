@@ -138,28 +138,27 @@
         <p>Your task list and status updates will go here in Step 4.</p>
     </div>
 <script type="module">
-        // 1. Direct web imports (Bypassing the need for 'npm install')
+        // 1. IMPORTS (Now including query, where, updateDoc, and deleteDoc)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-       import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
-        const firebaseConfig = {
-            apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
-            authDomain: "pm-pro-80c67.firebaseapp.com",
-            projectId: "pm-pro-80c67",
-            storageBucket: "pm-pro-80c67.firebasestorage.app",
-            messagingSenderId: "553036723851",
-            appId: "1:553036723851:web:3167a4def993500c39468e"
-        };
+       //2. Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCo_tMyCAhdUAMp_Mx2popJp2nqurO7SlY",
+  authDomain: "pm-pro-80c67.firebaseapp.com",
+  projectId: "pm-pro-80c67",
+  storageBucket: "pm-pro-80c67.firebasestorage.app",
+  messagingSenderId: "553036723851",
+  appId: "1:553036723851:web:3167a4def993500c39468e"
+};
 
-        // 3. Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // 4. Trigger Google Login Window
+        // 3. AUTHENTICATION FUNCTIONS
         window.signIn = () => {
             document.getElementById('auth-status').innerText = "Connecting...";
             document.getElementById('auth-status').style.color = "#64748b";
@@ -169,10 +168,9 @@
             });
         };
 
-        // 5. Trigger Log Out
         window.signOutUser = () => { signOut(auth); };
 
-        // 6. THE GATEKEEPER: Routes you to Admin or Member screens
+        // 4. THE GATEKEEPER
         onAuthStateChanged(auth, async (user) => {
             const loginView = document.getElementById('login-view');
             const adminView = document.getElementById('admin-view');
@@ -189,43 +187,36 @@
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
                         if (userData.role === 'admin') {
-                            loadProjects();
-                            loadMembers();
                             adminView.classList.remove('hidden');
                             memberView.classList.add('hidden');
+                            // Load data when Admin logs in
+                            loadProjects();
+                            loadMembers();
                         } else {
                             memberView.classList.remove('hidden');
                             adminView.classList.add('hidden');
                         }
                     } else {
-                        // First time login! Create a safe, default member profile.
                         await setDoc(userRef, {
                             name: user.displayName,
                             email: user.email,
-                            role: "member", 
-                            teamId: null,
+                            role: "member",
                             registeredAt: new Date().toISOString()
                         });
-                        
                         memberView.classList.remove('hidden');
                         adminView.classList.add('hidden');
                     }
                 } catch (error) {
-                    console.error("Error reading database:", error);
-                    loginView.classList.remove('hidden');
-                    document.getElementById('auth-status').innerText = "Database connection error.";
+                    console.error("Database error:", error);
                 }
             } else {
                 loginView.classList.remove('hidden');
                 adminView.classList.add('hidden');
                 memberView.classList.add('hidden');
-                document.getElementById('auth-status').innerText = "";
             }
         });
 
-// --- ADMIN FUNCTIONS ---
-
-        // 1. Save a new Project
+        // 5. ADMIN: PROJECT MANAGEMENT
         window.createProject = async () => {
             const title = document.getElementById('proj-title').value;
             const deadline = document.getElementById('proj-deadline').value;
@@ -236,15 +227,14 @@
             status.style.display = 'block'; status.style.color = '#64748b'; status.innerText = "Saving...";
 
             try {
-                await addDoc(collection(db, "projects"), {
-                    title: title, deadline: deadline, notes: notes, createdAt: new Date().toISOString()
-                });
+                await addDoc(collection(db, "projects"), { title, deadline, notes, createdAt: new Date().toISOString() });
                 status.style.color = '#10b981'; status.innerText = "Project saved!";
                 document.getElementById('proj-title').value = ''; document.getElementById('proj-notes').value = '';
                 setTimeout(() => status.style.display = 'none', 3000);
-            } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error saving project."; }
+                loadProjects(); // Refresh the list
+            } catch (error) { console.error(error); }
         };
-// UPGRADED: Fetch and display projects AND populate dropdowns
+
         window.loadProjects = async () => {
             const displayArea = document.getElementById('projects-display');
             const taskDropdown = document.getElementById('task-project-select');
@@ -256,66 +246,20 @@
 
             try {
                 const querySnapshot = await getDocs(collection(db, "projects"));
-                if (querySnapshot.empty) {
-                    displayArea.innerHTML = '<p style="color: #94a3b8;">No active projects.</p>';
-                    return;
-                }
+                if (querySnapshot.empty) { displayArea.innerHTML = '<p style="color: #94a3b8;">No active projects.</p>'; return; }
 
                 querySnapshot.forEach((docSnap) => {
                     const project = docSnap.data();
-                    const projectId = docSnap.id; // The unique Firebase ID
-
-                    // 1. Draw the card on screen
-                    displayArea.innerHTML += `
-                        <div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">
-                            <strong style="color: #2563eb;">${project.title}</strong>
-                            <div style="color: #64748b; font-size: 12px;">Due: ${project.deadline}</div>
-                        </div>
-                    `;
-
-                    // 2. Add to dropdown menus
+                    const projectId = docSnap.id;
+                    displayArea.innerHTML += `<div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;"><strong style="color: #2563eb;">${project.title}</strong><div style="color: #64748b; font-size: 12px;">Due: ${project.deadline}</div></div>`;
                     const optionHTML = `<option value="${projectId}">${project.title}</option>`;
                     taskDropdown.innerHTML += optionHTML;
                     assignDropdown.innerHTML += optionHTML;
                 });
-            } catch (error) { console.error("Error:", error); }
+            } catch (error) { console.error(error); }
         };
 
-        // UPGRADED: Fetch members AND populate assign dropdown
-        window.loadMembers = async () => {
-            const displayArea = document.getElementById('members-display');
-            const userDropdown = document.getElementById('assign-user-select');
-            
-            displayArea.innerHTML = '';
-            userDropdown.innerHTML = '<option value="">-- Step 3: Select Assignee --</option>';
-
-            try {
-                const querySnapshot = await getDocs(collection(db, "users"));
-                if (querySnapshot.empty) {
-                    displayArea.innerHTML = '<p style="color: #94a3b8;">No members found.</p>';
-                    return;
-                }
-
-                querySnapshot.forEach((docSnap) => {
-                    const user = docSnap.data();
-                    const badgeColor = user.role === 'admin' ? '#e0e7ff' : '#dcfce7';
-                    const textColor = user.role === 'admin' ? '#2563eb' : '#166534';
-
-                    // 1. Draw the card
-                    displayArea.innerHTML += `
-                        <div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                            <div><strong>${user.name}</strong><div style="color: #64748b; font-size: 12px;">${user.email}</div></div>
-                            <span style="background: ${badgeColor}; color: ${textColor}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${user.role}</span>
-                        </div>
-                    `;
-
-                    // 2. Add to Assignment Dropdown
-                    userDropdown.innerHTML += `<option value="${user.email}">${user.name} (${user.email})</option>`;
-                });
-            } catch (error) { console.error("Error:", error); }
-        };
-
-        // 2. Register a Team Member
+        // 6. ADMIN: TEAM MANAGEMENT
         window.addMember = async () => {
             const email = document.getElementById('member-email').value.toLowerCase().trim();
             const name = document.getElementById('member-name').value;
@@ -326,174 +270,121 @@
             status.style.display = 'block'; status.style.color = '#64748b'; status.innerText = "Registering...";
 
             try {
-                // Use setDoc so their email becomes their exact database ID
-                await setDoc(doc(db, "users", email), {
-                    email: email, name: name, role: role, registeredAt: new Date().toISOString()
-                });
+                await setDoc(doc(db, "users", email), { email, name, role, registeredAt: new Date().toISOString() });
                 status.style.color = '#10b981'; status.innerText = "Member added!";
-loadMembers()
                 document.getElementById('member-email').value = ''; document.getElementById('member-name').value = '';
                 setTimeout(() => status.style.display = 'none', 3000);
-            } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error adding member."; }
+                loadMembers(); // Refresh the list
+            } catch (error) { console.error(error); }
         };
 
-        // 3. Assign a Task
-        window.assignTask = async () => {
-            const title = document.getElementById('task-title').value;
-            const project = document.getElementById('task-project').value;
-            const assignee = document.getElementById('task-assignee').value.toLowerCase().trim();
-            const statusMsg = document.getElementById('task-status');
-
-            if (!title || !assignee) return alert("Task description and assignee email are required.");
-            statusMsg.style.display = 'block'; statusMsg.style.color = '#64748b'; statusMsg.innerText = "Assigning...";
+        window.loadMembers = async () => {
+            const displayArea = document.getElementById('members-display');
+            const userDropdown = document.getElementById('assign-user-select');
+            
+            displayArea.innerHTML = '';
+            userDropdown.innerHTML = '<option value="">-- Step 3: Select Assignee --</option>';
 
             try {
-                await addDoc(collection(db, "tasks"), {
-                    title: title,
-                    project: project,
-                    assignedTo: assignee,
-                    status: "to-do", // Default status for new tasks
-                    assignedAt: new Date().toISOString()
+                const querySnapshot = await getDocs(collection(db, "users"));
+                if (querySnapshot.empty) { displayArea.innerHTML = '<p style="color: #94a3b8;">No members found.</p>'; return; }
+
+                querySnapshot.forEach((docSnap) => {
+                    const user = docSnap.data();
+                    const badgeColor = user.role === 'admin' ? '#e0e7ff' : '#dcfce7';
+                    const textColor = user.role === 'admin' ? '#2563eb' : '#166534';
+                    displayArea.innerHTML += `<div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;"><div><strong>${user.name}</strong><div style="color: #64748b; font-size: 12px;">${user.email}</div></div><span style="background: ${badgeColor}; color: ${textColor}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${user.role}</span></div>`;
+                    userDropdown.innerHTML += `<option value="${user.email}">${user.name} (${user.email})</option>`;
                 });
-                statusMsg.style.color = '#10b981'; statusMsg.innerText = "Task assigned!";
-                document.getElementById('task-title').value = '';
-                setTimeout(() => statusMsg.style.display = 'none', 3000);
-            } catch (error) { statusMsg.style.color = '#ef4444'; statusMsg.innerText = "Error assigning task."; }
+            } catch (error) { console.error(error); }
         };
 
-// --- NEW TASK MANAGEMENT FUNCTIONS ---
-
-        // Create a new task tied to a specific project
+        // 7. ADMIN: TASK CREATION & ASSIGNMENT
         window.createTask = async () => {
             const projectId = document.getElementById('task-project-select').value;
             const title = document.getElementById('new-task-title').value;
             const statusMsg = document.getElementById('create-task-status');
 
             if (!projectId || !title) return alert("Please select a project and enter a task name.");
-            
             statusMsg.style.display = 'block'; statusMsg.style.color = '#64748b'; statusMsg.innerText = "Adding task...";
 
             try {
-                await addDoc(collection(db, "tasks"), {
-                    projectId: projectId,
-                    title: title,
-                    status: "unassigned", // New tasks start as unassigned
-                    assignedTo: "",
-                    createdAt: new Date().toISOString()
-                });
-                
+                await addDoc(collection(db, "tasks"), { projectId, title, status: "unassigned", assignedTo: "", createdAt: new Date().toISOString() });
                 document.getElementById('new-task-title').value = '';
                 statusMsg.style.color = '#10b981'; statusMsg.innerText = "Task added!";
                 setTimeout(() => statusMsg.style.display = 'none', 3000);
-                
-                // Refresh the task list on screen
                 loadTasksForProject(); 
             } catch (error) { console.error(error); }
         };
 
-        // Load tasks specifically for the selected project
         window.loadTasksForProject = async () => {
             const projectId = document.getElementById('task-project-select').value;
             const displayArea = document.getElementById('project-tasks-display');
-            
             if (!projectId) { displayArea.innerHTML = '<p style="color: #94a3b8; font-style: italic;">Select a project above...</p>'; return; }
             displayArea.innerHTML = 'Loading...';
 
             try {
-                // Firebase Query: Only get tasks where projectId matches!
                 const q = query(collection(db, "tasks"), where("projectId", "==", projectId));
                 const querySnapshot = await getDocs(q);
-                
                 if (querySnapshot.empty) { displayArea.innerHTML = '<p style="color: #94a3b8;">No tasks yet.</p>'; return; }
 
                 displayArea.innerHTML = '';
                 querySnapshot.forEach((docSnap) => {
                     const task = docSnap.data();
                     const taskId = docSnap.id;
-                    
                     let statusBadge = task.status === 'unassigned' ? '<span style="color:#ef4444; font-size:11px;">Unassigned</span>' : `<span style="color:#10b981; font-size:11px;">Assigned to ${task.assignedTo}</span>`;
-
-                    displayArea.innerHTML += `
-                        <div style="background: white; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-weight: 500;">${task.title}</div>
-                                ${statusBadge}
-                            </div>
-                            <button onclick="deleteTask('${taskId}')" style="background: transparent; color: #ef4444; border: 1px solid #fecaca; width: auto; padding: 4px 8px; margin: 0; font-size: 12px;">Delete</button>
-                        </div>
-                    `;
+                    
+                    // We attach the delete function directly to the button, passing the unique ID
+                    displayArea.innerHTML += `<div style="background: white; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;"><div><div style="font-weight: 500;">${task.title}</div>${statusBadge}</div><button onclick="deleteTask('${taskId}')" style="background: transparent; color: #ef4444; border: 1px solid #fecaca; width: auto; padding: 4px 8px; margin: 0; font-size: 12px;">Delete</button></div>`;
                 });
             } catch (error) { console.error(error); }
         };
 
-        // Delete a Task
         window.deleteTask = async (taskId) => {
             if(!confirm("Are you sure you want to delete this task?")) return;
             try {
                 await deleteDoc(doc(db, "tasks", taskId));
-                loadTasksForProject(); // Refresh the list
-                loadUnassignedTasks(); // Refresh assignment dropdown if open
+                loadTasksForProject(); 
+                loadUnassignedTasks(); 
             } catch (error) { console.error("Error deleting:", error); }
         };
 
-        // Load unassigned tasks into the Assign dropdown
         window.loadUnassignedTasks = async () => {
             const projectId = document.getElementById('assign-project-select').value;
             const taskDropdown = document.getElementById('assign-task-select');
-            
             if (!projectId) { taskDropdown.innerHTML = '<option value="">-- Select Project First --</option>'; return; }
-            
             taskDropdown.innerHTML = '<option value="">Loading tasks...</option>';
 
             try {
-                // Query: Get tasks for this project that are unassigned
                 const q = query(collection(db, "tasks"), where("projectId", "==", projectId), where("status", "==", "unassigned"));
                 const querySnapshot = await getDocs(q);
-                
-                taskDropdown.innerHTML = ''; // Clear dropdown
+                taskDropdown.innerHTML = '';
                 if (querySnapshot.empty) { taskDropdown.innerHTML = '<option value="">-- No unassigned tasks --</option>'; return; }
-
                 querySnapshot.forEach((docSnap) => {
                     taskDropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().title}</option>`;
                 });
             } catch (error) { console.error(error); }
         };
 
-        // Bulk Assign Tasks
         window.assignSelectedTasks = async () => {
             const taskDropdown = document.getElementById('assign-task-select');
             const assigneeEmail = document.getElementById('assign-user-select').value;
             const statusMsg = document.getElementById('assign-status');
-
-            // Get all selected tasks from the multi-select box
             const selectedTaskIds = Array.from(taskDropdown.selectedOptions).map(option => option.value).filter(val => val !== "");
 
-            if (selectedTaskIds.length === 0 || !assigneeEmail) {
-                return alert("Please select at least one task and a team member.");
-            }
-
+            if (selectedTaskIds.length === 0 || !assigneeEmail) return alert("Please select at least one task and a team member.");
             statusMsg.style.display = 'block'; statusMsg.style.color = '#64748b'; statusMsg.innerText = "Assigning...";
 
             try {
-                // Loop through selected tasks and update them in Firebase
                 for (const taskId of selectedTaskIds) {
-                    const taskRef = doc(db, "tasks", taskId);
-                    await updateDoc(taskRef, {
-                        status: "to-do",
-                        assignedTo: assigneeEmail,
-                        assignedAt: new Date().toISOString()
-                    });
+                    await updateDoc(doc(db, "tasks", taskId), { status: "to-do", assignedTo: assigneeEmail, assignedAt: new Date().toISOString() });
                 }
-                
                 statusMsg.style.color = '#10b981'; statusMsg.innerText = `Successfully assigned ${selectedTaskIds.length} task(s)!`;
                 setTimeout(() => statusMsg.style.display = 'none', 3000);
-                
-                // Refresh the views
                 loadUnassignedTasks(); 
                 loadTasksForProject();
             } catch (error) { console.error(error); statusMsg.style.color = '#ef4444'; statusMsg.innerText = "Error assigning tasks."; }
         };
-
     </script>
     </body>
 </html>
