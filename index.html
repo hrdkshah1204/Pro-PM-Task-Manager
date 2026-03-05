@@ -49,25 +49,51 @@
         </style>
 
         <div class="grid-2">
+            
             <div class="admin-module">
-                <h3>2. Add Team Member</h3>
-                <input type="email" id="member-email" placeholder="Colleague's Google Email">
-                <input type="text" id="member-name" placeholder="Full Name">
-                <select id="member-role">
-                    <option value="member">Team Member</option>
-                    <option value="admin">Admin</option>
+                <h3>3. Create Tasks</h3>
+                <p style="font-size: 13px; color: #64748b;">Add tasks to a project before assigning them.</p>
+                
+                <select id="task-project-select" onchange="loadTasksForProject()" style="background: #fff;">
+                    <option value="">-- Select a Project --</option>
                 </select>
-                <button onclick="addMember()">Register Member</button>
-                <p id="member-status" style="font-size: 13px; margin-top: 10px; display: none;"></p>
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-task-title" placeholder="Task Name (e.g., Draft Worksheet)" style="flex: 1;">
+                    <button onclick="createTask()" style="margin-top: 0; width: auto; padding: 10px 15px;">Add</button>
+                </div>
+                <p id="create-task-status" style="font-size: 13px; margin-top: 5px; display: none;"></p>
 
-                <div style="margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 15px;">
-                    <h4 style="margin-top: 0; color: #475569;">Registered Members</h4>
-                    <div id="members-display" style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
-                        <p style="color: #94a3b8; font-style: italic;">Loading members...</p>
+                <div style="margin-top: 15px; border-top: 1px solid #cbd5e1; padding-top: 15px;">
+                    <h4 style="margin-top: 0; color: #475569;">Tasks in Project</h4>
+                    <div id="project-tasks-display" style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                        <p style="color: #94a3b8; font-style: italic;">Select a project above...</p>
                     </div>
                 </div>
             </div>
-           </div>
+
+            <div class="admin-module">
+                <h3>4. Assign Tasks</h3>
+                <p style="font-size: 13px; color: #64748b;">Dispatch tasks to your team members.</p>
+                
+                <select id="assign-project-select" onchange="loadUnassignedTasks()" style="background: #fff;">
+                    <option value="">-- Step 1: Select Project --</option>
+                </select>
+                
+                <select id="assign-task-select" multiple style="height: 100px; background: #fff;" title="Hold Ctrl/Cmd to select multiple">
+                    <option value="">-- Step 2: Select Tasks --</option>
+                </select>
+                <p style="font-size: 11px; color: #64748b; margin-top: -10px; margin-bottom: 10px;">Hold Ctrl (Windows) or Cmd (Mac) to select multiple tasks.</p>
+
+                <select id="assign-user-select" style="background: #fff;">
+                    <option value="">-- Step 3: Select Assignee --</option>
+                </select>
+
+                <button onclick="assignSelectedTasks()">Assign Task(s)</button>
+                <p id="assign-status" style="font-size: 13px; margin-top: 5px; display: none;"></p>
+            </div>
+
+        </div>
 
             <div class="admin-module">
                 <h3>2. Add Team Member</h3>
@@ -115,7 +141,7 @@
         // 1. Direct web imports (Bypassing the need for 'npm install')
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-       import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+       import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
         const firebaseConfig = {
@@ -218,74 +244,75 @@
                 setTimeout(() => status.style.display = 'none', 3000);
             } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error saving project."; }
         };
-// Fetch and display projects
+// UPGRADED: Fetch and display projects AND populate dropdowns
         window.loadProjects = async () => {
             const displayArea = document.getElementById('projects-display');
-            displayArea.innerHTML = ''; // Clear the "Loading..." text
+            const taskDropdown = document.getElementById('task-project-select');
+            const assignDropdown = document.getElementById('assign-project-select');
+            
+            displayArea.innerHTML = '';
+            taskDropdown.innerHTML = '<option value="">-- Select a Project --</option>';
+            assignDropdown.innerHTML = '<option value="">-- Step 1: Select Project --</option>';
 
             try {
-                // Fetch all documents from the "projects" collection
                 const querySnapshot = await getDocs(collection(db, "projects"));
-                
                 if (querySnapshot.empty) {
                     displayArea.innerHTML = '<p style="color: #94a3b8;">No active projects.</p>';
                     return;
                 }
 
-                // Loop through each project and create a little visual card for it
-                querySnapshot.forEach((doc) => {
-                    const project = doc.data();
+                querySnapshot.forEach((docSnap) => {
+                    const project = docSnap.data();
+                    const projectId = docSnap.id; // The unique Firebase ID
+
+                    // 1. Draw the card on screen
                     displayArea.innerHTML += `
                         <div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">
                             <strong style="color: #2563eb;">${project.title}</strong>
-                            <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Due: ${project.deadline}</div>
+                            <div style="color: #64748b; font-size: 12px;">Due: ${project.deadline}</div>
                         </div>
                     `;
+
+                    // 2. Add to dropdown menus
+                    const optionHTML = `<option value="${projectId}">${project.title}</option>`;
+                    taskDropdown.innerHTML += optionHTML;
+                    assignDropdown.innerHTML += optionHTML;
                 });
-            } catch (error) {
-                console.error("Error loading projects: ", error);
-                displayArea.innerHTML = '<p style="color: #ef4444;">Failed to load projects.</p>';
-            }
+            } catch (error) { console.error("Error:", error); }
         };
 
-// Fetch and display team members
+        // UPGRADED: Fetch members AND populate assign dropdown
         window.loadMembers = async () => {
             const displayArea = document.getElementById('members-display');
-            displayArea.innerHTML = ''; // Clear the "Loading..." text
+            const userDropdown = document.getElementById('assign-user-select');
+            
+            displayArea.innerHTML = '';
+            userDropdown.innerHTML = '<option value="">-- Step 3: Select Assignee --</option>';
 
             try {
-                // Fetch all documents from the "users" collection
                 const querySnapshot = await getDocs(collection(db, "users"));
-                
                 if (querySnapshot.empty) {
                     displayArea.innerHTML = '<p style="color: #94a3b8;">No members found.</p>';
                     return;
                 }
 
-                // Loop through each user and create a visual card
-                querySnapshot.forEach((doc) => {
-                    const user = doc.data();
-                    
-                    // Set colors based on role
+                querySnapshot.forEach((docSnap) => {
+                    const user = docSnap.data();
                     const badgeColor = user.role === 'admin' ? '#e0e7ff' : '#dcfce7';
                     const textColor = user.role === 'admin' ? '#2563eb' : '#166534';
 
+                    // 1. Draw the card
                     displayArea.innerHTML += `
                         <div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong style="color: #0f172a;">${user.name || 'Unknown Name'}</strong>
-                                <div style="color: #64748b; font-size: 12px; margin-top: 4px;">${user.email}</div>
-                            </div>
-                            <span style="background: ${badgeColor}; color: ${textColor}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">
-                                ${user.role}
-                            </span>
+                            <div><strong>${user.name}</strong><div style="color: #64748b; font-size: 12px;">${user.email}</div></div>
+                            <span style="background: ${badgeColor}; color: ${textColor}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${user.role}</span>
                         </div>
                     `;
+
+                    // 2. Add to Assignment Dropdown
+                    userDropdown.innerHTML += `<option value="${user.email}">${user.name} (${user.email})</option>`;
                 });
-            } catch (error) {
-                console.error("Error loading members: ", error);
-                displayArea.innerHTML = '<p style="color: #ef4444;">Failed to load members.</p>';
-            }
+            } catch (error) { console.error("Error:", error); }
         };
 
         // 2. Register a Team Member
@@ -332,6 +359,139 @@ loadMembers()
                 document.getElementById('task-title').value = '';
                 setTimeout(() => statusMsg.style.display = 'none', 3000);
             } catch (error) { statusMsg.style.color = '#ef4444'; statusMsg.innerText = "Error assigning task."; }
+        };
+
+// --- NEW TASK MANAGEMENT FUNCTIONS ---
+
+        // Create a new task tied to a specific project
+        window.createTask = async () => {
+            const projectId = document.getElementById('task-project-select').value;
+            const title = document.getElementById('new-task-title').value;
+            const statusMsg = document.getElementById('create-task-status');
+
+            if (!projectId || !title) return alert("Please select a project and enter a task name.");
+            
+            statusMsg.style.display = 'block'; statusMsg.style.color = '#64748b'; statusMsg.innerText = "Adding task...";
+
+            try {
+                await addDoc(collection(db, "tasks"), {
+                    projectId: projectId,
+                    title: title,
+                    status: "unassigned", // New tasks start as unassigned
+                    assignedTo: "",
+                    createdAt: new Date().toISOString()
+                });
+                
+                document.getElementById('new-task-title').value = '';
+                statusMsg.style.color = '#10b981'; statusMsg.innerText = "Task added!";
+                setTimeout(() => statusMsg.style.display = 'none', 3000);
+                
+                // Refresh the task list on screen
+                loadTasksForProject(); 
+            } catch (error) { console.error(error); }
+        };
+
+        // Load tasks specifically for the selected project
+        window.loadTasksForProject = async () => {
+            const projectId = document.getElementById('task-project-select').value;
+            const displayArea = document.getElementById('project-tasks-display');
+            
+            if (!projectId) { displayArea.innerHTML = '<p style="color: #94a3b8; font-style: italic;">Select a project above...</p>'; return; }
+            displayArea.innerHTML = 'Loading...';
+
+            try {
+                // Firebase Query: Only get tasks where projectId matches!
+                const q = query(collection(db, "tasks"), where("projectId", "==", projectId));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) { displayArea.innerHTML = '<p style="color: #94a3b8;">No tasks yet.</p>'; return; }
+
+                displayArea.innerHTML = '';
+                querySnapshot.forEach((docSnap) => {
+                    const task = docSnap.data();
+                    const taskId = docSnap.id;
+                    
+                    let statusBadge = task.status === 'unassigned' ? '<span style="color:#ef4444; font-size:11px;">Unassigned</span>' : `<span style="color:#10b981; font-size:11px;">Assigned to ${task.assignedTo}</span>`;
+
+                    displayArea.innerHTML += `
+                        <div style="background: white; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 500;">${task.title}</div>
+                                ${statusBadge}
+                            </div>
+                            <button onclick="deleteTask('${taskId}')" style="background: transparent; color: #ef4444; border: 1px solid #fecaca; width: auto; padding: 4px 8px; margin: 0; font-size: 12px;">Delete</button>
+                        </div>
+                    `;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // Delete a Task
+        window.deleteTask = async (taskId) => {
+            if(!confirm("Are you sure you want to delete this task?")) return;
+            try {
+                await deleteDoc(doc(db, "tasks", taskId));
+                loadTasksForProject(); // Refresh the list
+                loadUnassignedTasks(); // Refresh assignment dropdown if open
+            } catch (error) { console.error("Error deleting:", error); }
+        };
+
+        // Load unassigned tasks into the Assign dropdown
+        window.loadUnassignedTasks = async () => {
+            const projectId = document.getElementById('assign-project-select').value;
+            const taskDropdown = document.getElementById('assign-task-select');
+            
+            if (!projectId) { taskDropdown.innerHTML = '<option value="">-- Select Project First --</option>'; return; }
+            
+            taskDropdown.innerHTML = '<option value="">Loading tasks...</option>';
+
+            try {
+                // Query: Get tasks for this project that are unassigned
+                const q = query(collection(db, "tasks"), where("projectId", "==", projectId), where("status", "==", "unassigned"));
+                const querySnapshot = await getDocs(q);
+                
+                taskDropdown.innerHTML = ''; // Clear dropdown
+                if (querySnapshot.empty) { taskDropdown.innerHTML = '<option value="">-- No unassigned tasks --</option>'; return; }
+
+                querySnapshot.forEach((docSnap) => {
+                    taskDropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().title}</option>`;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // Bulk Assign Tasks
+        window.assignSelectedTasks = async () => {
+            const taskDropdown = document.getElementById('assign-task-select');
+            const assigneeEmail = document.getElementById('assign-user-select').value;
+            const statusMsg = document.getElementById('assign-status');
+
+            // Get all selected tasks from the multi-select box
+            const selectedTaskIds = Array.from(taskDropdown.selectedOptions).map(option => option.value).filter(val => val !== "");
+
+            if (selectedTaskIds.length === 0 || !assigneeEmail) {
+                return alert("Please select at least one task and a team member.");
+            }
+
+            statusMsg.style.display = 'block'; statusMsg.style.color = '#64748b'; statusMsg.innerText = "Assigning...";
+
+            try {
+                // Loop through selected tasks and update them in Firebase
+                for (const taskId of selectedTaskIds) {
+                    const taskRef = doc(db, "tasks", taskId);
+                    await updateDoc(taskRef, {
+                        status: "to-do",
+                        assignedTo: assigneeEmail,
+                        assignedAt: new Date().toISOString()
+                    });
+                }
+                
+                statusMsg.style.color = '#10b981'; statusMsg.innerText = `Successfully assigned ${selectedTaskIds.length} task(s)!`;
+                setTimeout(() => statusMsg.style.display = 'none', 3000);
+                
+                // Refresh the views
+                loadUnassignedTasks(); 
+                loadTasksForProject();
+            } catch (error) { console.error(error); statusMsg.style.color = '#ef4444'; statusMsg.innerText = "Error assigning tasks."; }
         };
 
     </script>
