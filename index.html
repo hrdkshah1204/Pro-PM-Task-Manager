@@ -210,7 +210,32 @@
                 </table>
             </div>
 
-            <div id="sub5" class="sub-page hidden"><h3>Assign Project (Coming Soon)</h3></div>
+            <div id="sub5" class="sub-page hidden">
+                <h3>Assign Project Tasks</h3>
+                <p style="font-size: 13px; color: #64748b;">Select a project to assign its tasks to your teams.</p>
+                
+                <div class="form-group" style="margin-bottom: 20px; max-width: 400px;">
+                    <label>1. Select Project</label>
+                    <select id="assign-project-select" onchange="loadAssignmentTable()">
+                        <option value="">-- Select a Project --</option>
+                    </select>
+                </div>
+
+                <h3 style="margin-top: 30px;">Task Assignment Board</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Task Description</th>
+                            <th style="width: 25%;">Select Team</th>
+                            <th style="width: 25%;">Select Member</th>
+                            <th style="width: 100px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assign-table-body">
+                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Select a project above...</td></tr>
+                    </tbody>
+                </table>
+            </div>
             <div id="sub6" class="sub-page hidden"><h3>Analytics (Coming Soon)</h3></div>
 
         </div>
@@ -283,12 +308,13 @@ const firebaseConfig = {
             if(pageId === 'sub2') { loadProjectDropdown(); loadTasksTable(); }
             if(pageId === 'sub3') { loadTeamsTable(); }
             if(pageId === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
-        };
+ 	    // NEW: Load Sub Page 5 data
+            if(pageId === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); 
+	// Pre-load people for the dropdowns
+            }
+ };
 
-       // ==========================================
-        // SUB PAGE 1: CREATE PROJECT LOGIC
-        // ==========================================
-
+        // --- SUB PAGE 1: CREATE PROJECT ---
         window.saveProject = async () => {
             const nameInput = document.getElementById('p-name');
             const name = nameInput.value.trim();
@@ -297,13 +323,9 @@ const firebaseConfig = {
             const status = document.getElementById('p-status');
             const editId = document.getElementById('edit-project-id').value;
 
-            if (!name || !date || !desc) {
-                return alert("Please fill out all project fields.");
-            }
+            if (!name || !date || !desc) return alert("Please fill out all project fields.");
 
-            status.style.display = 'inline'; 
-            status.style.color = '#64748b'; 
-            status.innerText = "Checking...";
+            status.style.display = 'inline'; status.style.color = '#64748b'; status.innerText = "Checking...";
 
             try {
                 // Popup Duplicate Checker
@@ -312,10 +334,8 @@ const firebaseConfig = {
                 
                 let isDuplicate = false;
                 dupSnap.forEach((docSnap) => {
-                    // It is only a duplicate if the names match AND we are not currently editing this exact project
-                    if (docSnap.id !== editId) {
-                        isDuplicate = true;
-                    }
+                    // It's only a duplicate if the names match AND it's a different project ID
+                    if (docSnap.id !== editId) isDuplicate = true;
                 });
 
                 if (isDuplicate) {
@@ -329,20 +349,11 @@ const firebaseConfig = {
                 
                 if (editId) {
                     // Update Mode
-                    await updateDoc(doc(db, "projects", editId), { 
-                        name: name, 
-                        endDate: date, 
-                        description: desc 
-                    });
+                    await updateDoc(doc(db, "projects", editId), { name, endDate: date, description: desc });
                     status.innerText = "Updated!";
                 } else {
                     // Create Mode
-                    await addDoc(collection(db, "projects"), { 
-                        name: name, 
-                        endDate: date, 
-                        description: desc, 
-                        createdAt: new Date().toISOString() 
-                    });
+                    await addDoc(collection(db, "projects"), { name, endDate: date, description: desc, createdAt: new Date().toISOString() });
                     status.innerText = "Saved!";
                 }
                 
@@ -351,12 +362,7 @@ const firebaseConfig = {
                 
                 cancelEdit();
                 loadProjectsTable(); 
-            } catch (error) { 
-                console.error("Error saving project:", error); 
-                status.style.color = '#ef4444'; 
-                status.innerText = "Error saving."; 
-                setTimeout(() => status.style.display = 'none', 3000);
-            }
+            } catch (error) { console.error(error); status.style.color = '#ef4444'; status.innerText = "Error saving."; }
         };
 
         window.loadProjectsTable = async () => {
@@ -365,11 +371,7 @@ const firebaseConfig = {
             try {
                 const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
                 const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) { 
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; 
-                    return; 
-                }
+                if (querySnapshot.empty) { tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8;">No projects found.</td></tr>'; return; }
 
                 tbody.innerHTML = '';
                 querySnapshot.forEach((docSnap) => {
@@ -386,49 +388,7 @@ const firebaseConfig = {
                         </tr>
                     `;
                 });
-            } catch (error) { 
-                console.error("Error loading projects table:", error); 
-            }
-        };
-
-        window.editProject = async (id) => {
-            try {
-                const docSnap = await getDoc(doc(db, "projects", id));
-                if (docSnap.exists()) {
-                    const p = docSnap.data();
-                    document.getElementById('p-name').value = p.name;
-                    document.getElementById('p-date').value = p.endDate;
-                    document.getElementById('p-desc').value = p.description;
-                    
-                    document.getElementById('edit-project-id').value = id;
-                    document.getElementById('btn-save-project').innerText = "Update Project";
-                    document.getElementById('btn-cancel-edit').classList.remove('hidden');
-                    
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            } catch (error) { 
-                console.error("Error fetching project details:", error); 
-            }
-        };
-
-        window.cancelEdit = () => {
-            document.getElementById('p-name').value = '';
-            document.getElementById('p-date').value = '';
-            document.getElementById('p-desc').value = '';
-            document.getElementById('edit-project-id').value = '';
-            document.getElementById('btn-save-project').innerText = "Save Project";
-            document.getElementById('btn-cancel-edit').classList.add('hidden');
-        };
-
-        window.deleteProject = async (id) => {
-            if(confirm("Are you sure you want to delete this project? This cannot be undone.")) {
-                try { 
-                    await deleteDoc(doc(db, "projects", id)); 
-                    loadProjectsTable(); 
-                } catch (error) { 
-                    console.error("Error deleting project:", error); 
-                }
-            }
+            } catch (error) { console.error(error); }
         };
 
 
@@ -742,7 +702,150 @@ window.editProject = async (id) => {
             }
         };
 
+// ==========================================
+        // SUB PAGE 5: ASSIGN PROJECT LOGIC
+        // ==========================================
+        
+        // We hold these in memory so the table loads instantly without querying the database 100 times
+        window.workspaceTeams = [];
+        window.workspaceMembers = [];
+
+        // 1. Fill the main Project Dropdown
+        window.loadAssignProjectDropdown = async () => {
+            const dropdown = document.getElementById('assign-project-select');
+            dropdown.innerHTML = '<option value="">-- Select a Project --</option>';
+            try {
+                const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach((docSnap) => {
+                    dropdown.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // 2. Pre-fetch teams and members secretly in the background
+        window.fetchTeamsAndMembers = async () => {
+            window.workspaceTeams = [];
+            window.workspaceMembers = [];
+            try {
+                const teamSnap = await getDocs(collection(db, "teams"));
+                teamSnap.forEach(doc => window.workspaceTeams.push({ id: doc.id, ...doc.data() }));
+
+                const memberSnap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
+                memberSnap.forEach(doc => window.workspaceMembers.push({ email: doc.id, ...doc.data() }));
+            } catch (error) { console.error("Error fetching teams/members:", error); }
+        };
+
+        // 3. Draw the Table when a project is selected
+        window.loadAssignmentTable = async () => {
+            const projectId = document.getElementById('assign-project-select').value;
+            const tbody = document.getElementById('assign-table-body');
+            
+            if (!projectId) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Select a project above...</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">Loading tasks...</td></tr>';
+
+            try {
+                const q = query(collection(db, "tasks"), where("projectId", "==", projectId));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No tasks created for this project yet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                
+                // Build the Team options string once to reuse
+                let teamOptions = '<option value="">-- Select Team --</option>';
+                window.workspaceTeams.forEach(t => {
+                    teamOptions += `<option value="${t.id}">${t.name}</option>`;
+                });
+
+                querySnapshot.forEach((docSnap) => {
+                    const task = docSnap.data();
+                    const taskId = docSnap.id;
+                    
+                    // Show a green badge if it is already assigned!
+                    const statusBadge = task.assignedToEmail 
+                        ? `<br><span style="font-size: 11px; color: #10b981; font-weight: bold;">Assigned to: ${task.assignedToName}</span>` 
+                        : `<br><span style="font-size: 11px; color: #ef4444; font-weight: bold;">Unassigned</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: 500;">${task.description} ${statusBadge}</td>
+                            <td>
+                                <select id="team-select-${taskId}" onchange="updateRowMembers('${taskId}')" style="padding: 6px; font-size: 13px;">
+                                    ${teamOptions}
+                                </select>
+                            </td>
+                            <td>
+                                <select id="member-select-${taskId}" style="padding: 6px; font-size: 13px;">
+                                    <option value="">-- Select Team First --</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button onclick="assignSpecificTask('${taskId}')" style="padding: 6px 10px; font-size: 12px; width: 100%;">Assign</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) { console.error("Error loading tasks:", error); }
+        };
+
+        // 4. Dynamic Filtering: When Team is selected, update that row's Member dropdown
+        window.updateRowMembers = (taskId) => {
+            const teamId = document.getElementById(`team-select-${taskId}`).value;
+            const memberDropdown = document.getElementById(`member-select-${taskId}`);
+            
+            memberDropdown.innerHTML = '<option value="">-- Select Member --</option>';
+            if (!teamId) return;
+
+            // Filter our pre-fetched members list by the selected Team ID
+            const filteredMembers = window.workspaceMembers.filter(m => m.teamId === teamId);
+            
+            if (filteredMembers.length === 0) {
+                memberDropdown.innerHTML = '<option value="">-- No members in team --</option>';
+                return;
+            }
+
+            filteredMembers.forEach(m => {
+                memberDropdown.innerHTML += `<option value="${m.email}">${m.name}</option>`;
+            });
+        };
+
+        // 5. Final Assignment: Push the update to Firebase
+        window.assignSpecificTask = async (taskId) => {
+            const teamId = document.getElementById(`team-select-${taskId}`).value;
+            const memberEmail = document.getElementById(`member-select-${taskId}`).value;
+
+            if (!teamId || !memberEmail) {
+                return alert("Please select both a Team and a Member to assign this task.");
+            }
+
+            const memberObj = window.workspaceMembers.find(m => m.email === memberEmail);
+            
+            try {
+                // Update the task in the database with the assignee's details
+                await updateDoc(doc(db, "tasks", taskId), {
+                    assignedToEmail: memberEmail,
+                    assignedToName: memberObj.name,
+                    assignedTeamId: teamId,
+                    status: "assigned",
+                    assignedAt: new Date().toISOString()
+                });
+                
+                alert("Task assigned successfully!");
+                loadAssignmentTable(); // Refresh the table to show the new green badge
+            } catch (error) {
+                console.error("Error assigning task:", error);
+                alert("Failed to assign task.");
+            }
+        };
+
     </script>
 </body>
 </html>
-
