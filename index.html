@@ -50,13 +50,24 @@
 
         <div class="grid-2">
             <div class="admin-module">
-                <h3>1. Create Project</h3>
-                <input type="text" id="proj-title" placeholder="Project Title (e.g., Grade 8 Curriculum)">
-                <input type="date" id="proj-deadline" title="Deadline">
-                <input type="text" id="proj-notes" placeholder="Brief notes...">
-                <button onclick="createProject()">Save Project</button>
-                <p id="proj-status" style="font-size: 13px; margin-top: 10px; display: none;"></p>
+                <h3>2. Add Team Member</h3>
+                <input type="email" id="member-email" placeholder="Colleague's Google Email">
+                <input type="text" id="member-name" placeholder="Full Name">
+                <select id="member-role">
+                    <option value="member">Team Member</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <button onclick="addMember()">Register Member</button>
+                <p id="member-status" style="font-size: 13px; margin-top: 10px; display: none;"></p>
+
+                <div style="margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 15px;">
+                    <h4 style="margin-top: 0; color: #475569;">Registered Members</h4>
+                    <div id="members-display" style="font-size: 14px; display: flex; flex-direction: column; gap: 8px;">
+                        <p style="color: #94a3b8; font-style: italic;">Loading members...</p>
+                    </div>
+                </div>
             </div>
+           </div>
 
             <div class="admin-module">
                 <h3>2. Add Team Member</h3>
@@ -104,7 +115,7 @@
         // 1. Direct web imports (Bypassing the need for 'npm install')
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+       import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
         const firebaseConfig = {
@@ -152,6 +163,8 @@
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
                         if (userData.role === 'admin') {
+                            loadProjects();
+                            loadMembers();
                             adminView.classList.remove('hidden');
                             memberView.classList.add('hidden');
                         } else {
@@ -205,6 +218,75 @@
                 setTimeout(() => status.style.display = 'none', 3000);
             } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error saving project."; }
         };
+// Fetch and display projects
+        window.loadProjects = async () => {
+            const displayArea = document.getElementById('projects-display');
+            displayArea.innerHTML = ''; // Clear the "Loading..." text
+
+            try {
+                // Fetch all documents from the "projects" collection
+                const querySnapshot = await getDocs(collection(db, "projects"));
+                
+                if (querySnapshot.empty) {
+                    displayArea.innerHTML = '<p style="color: #94a3b8;">No active projects.</p>';
+                    return;
+                }
+
+                // Loop through each project and create a little visual card for it
+                querySnapshot.forEach((doc) => {
+                    const project = doc.data();
+                    displayArea.innerHTML += `
+                        <div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <strong style="color: #2563eb;">${project.title}</strong>
+                            <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Due: ${project.deadline}</div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error loading projects: ", error);
+                displayArea.innerHTML = '<p style="color: #ef4444;">Failed to load projects.</p>';
+            }
+        };
+
+// Fetch and display team members
+        window.loadMembers = async () => {
+            const displayArea = document.getElementById('members-display');
+            displayArea.innerHTML = ''; // Clear the "Loading..." text
+
+            try {
+                // Fetch all documents from the "users" collection
+                const querySnapshot = await getDocs(collection(db, "users"));
+                
+                if (querySnapshot.empty) {
+                    displayArea.innerHTML = '<p style="color: #94a3b8;">No members found.</p>';
+                    return;
+                }
+
+                // Loop through each user and create a visual card
+                querySnapshot.forEach((doc) => {
+                    const user = doc.data();
+                    
+                    // Set colors based on role
+                    const badgeColor = user.role === 'admin' ? '#e0e7ff' : '#dcfce7';
+                    const textColor = user.role === 'admin' ? '#2563eb' : '#166534';
+
+                    displayArea.innerHTML += `
+                        <div style="background: white; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: #0f172a;">${user.name || 'Unknown Name'}</strong>
+                                <div style="color: #64748b; font-size: 12px; margin-top: 4px;">${user.email}</div>
+                            </div>
+                            <span style="background: ${badgeColor}; color: ${textColor}; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">
+                                ${user.role}
+                            </span>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error loading members: ", error);
+                displayArea.innerHTML = '<p style="color: #ef4444;">Failed to load members.</p>';
+            }
+        };
 
         // 2. Register a Team Member
         window.addMember = async () => {
@@ -222,6 +304,7 @@
                     email: email, name: name, role: role, registeredAt: new Date().toISOString()
                 });
                 status.style.color = '#10b981'; status.innerText = "Member added!";
+loadMembers()
                 document.getElementById('member-email').value = ''; document.getElementById('member-name').value = '';
                 setTimeout(() => status.style.display = 'none', 3000);
             } catch (error) { status.style.color = '#ef4444'; status.innerText = "Error adding member."; }
