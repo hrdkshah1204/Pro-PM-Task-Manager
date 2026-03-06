@@ -136,7 +136,10 @@
 
         <div class="view-container">
             <div class="top-quick-access">
-                <button class="quick-btn" onclick="navTo('sub8')">🔔 Notifications</button>
+                <button class="quick-btn" onclick="navTo('sub8')" style="position: relative;">
+                    🔔 Notifications
+                    <span id="admin-notif-dot" class="hidden" style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; border: 2px solid var(--surface);"></span>
+                </button>
                 <button class="quick-btn" onclick="navTo('sub7')">⚙️ Settings</button>
                 <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
             </div>
@@ -297,7 +300,10 @@
         </div>
         <div class="view-container">
             <div class="top-quick-access">
-                <button class="quick-btn" onclick="navToMember('m-sub3')" title="Notifications">🔔 Alerts</button>
+                <button class="quick-btn" onclick="navToMember('m-sub3')" title="Notifications" style="position: relative;">
+                    🔔 Alerts
+                    <span id="member-notif-dot" class="hidden" style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; border: 2px solid var(--surface);"></span>
+                </button>
                 <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
             </div>
             <div class="main-content">
@@ -454,15 +460,14 @@
 
         window.completeOnboarding = async () => {
             await setDoc(doc(db, "users", auth.currentUser.email), { 
-                name: document.getElementById('ob-name').value, 
-                workspaceName: document.getElementById('ob-workspace-name').value,
-                company: document.getElementById('ob-company').value,
-                teamSize: document.getElementById('ob-size').value,
+                name: document.getElementById('ob-name').value, workspaceName: document.getElementById('ob-workspace-name').value,
+                company: document.getElementById('ob-company').value, teamSize: document.getElementById('ob-size').value,
                 onboardingComplete: true, role: 'admin' 
             }, { merge: true });
             location.reload();
         };
 
+        // --- ADMIN MODULES ---
         window.navTo = (id) => {
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('#admin-view .sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -533,7 +538,7 @@
             const pid = document.getElementById('t-project-id').value;
             const taskSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
             if(taskSnap.size >= 10) return alert("Limit: 10 tasks/project.");
-            await addDoc(collection(db, "tasks"), {projectId: pid, description: document.getElementById('t-desc').value, status: "to-do", adminEmail: auth.currentUser.email});
+            await addDoc(collection(db, "tasks"), {projectId: pid, description: document.getElementById('t-desc').value, status: "To Do", adminEmail: auth.currentUser.email});
             document.getElementById('t-desc').value = ''; loadTasksTable();
         };
         window.loadTasksTable = async () => {
@@ -649,7 +654,7 @@
                 await deleteDoc(doc(db, "users", id)); 
                 const assignedTasks = await getDocs(query(collection(db, "tasks"), where("assignedToEmail", "==", id)));
                 assignedTasks.forEach(async (t) => {
-                    await updateDoc(doc(db, "tasks", t.id), { assignedToEmail: "", assignedToName: "", assignedTeamId: "", assignedTeamName: "", status: "to-do" });
+                    await updateDoc(doc(db, "tasks", t.id), { assignedToEmail: "", assignedToName: "", assignedTeamId: "", assignedTeamName: "", status: "To Do" });
                 });
                 loadMembersTable(); 
             }
@@ -696,10 +701,11 @@
                 
                 sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${assigneeDisplay}</td><td>
                     <select onchange="manualStatusUpdate('${d.id}', this.value)" style="padding:4px; font-size:12px;">
-                        <option value="to-do" ${t.status==='to-do'?'selected':''}>To-Do</option>
+                        <option value="To Do" ${t.status==='To Do'||t.status==='to-do'?'selected':''}>To Do</option>
                         <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
-                        <option value="in-progress" ${t.status==='in-progress'?'selected':''}>In-Progress</option>
-                        <option value="completed" ${t.status==='completed'?'selected':''}>Completed</option>
+                        <option value="WIP" ${t.status==='WIP'||t.status==='in-progress'?'selected':''}>WIP</option>
+                        <option value="On Hold" ${t.status==='On Hold'?'selected':''}>On Hold</option>
+                        <option value="Done" ${t.status==='Done'||t.status==='completed'?'selected':''}>Done</option>
                     </select></td></tr>`;
             });
         };
@@ -722,13 +728,12 @@
                 const adminName = document.querySelector('.user-name').innerText;
                 const teamSelect = document.getElementById(`t-${tid}`);
                 const teamName = teamSelect.options[teamSelect.selectedIndex].text;
-                
                 const assignedAtDate = new Date().toISOString().split('T')[0];
 
                 await updateDoc(doc(db, "tasks", tid), { 
                     assignedToEmail: email, assignedToName: member.name, assignedTeamId: tId, 
                     assignedTeamName: teamName, assignedByName: adminName, status: 'assigned',
-                    targetDate: targetDate, assignedAt: assignedAtDate
+                    targetDate: targetDate, assignedAt: assignedAtDate, assignedTimestamp: Date.now()
                 });
 
                 try {
@@ -758,7 +763,7 @@
             const container = document.getElementById('project-progress-container'); container.innerHTML = '';
             pSnap.forEach(d => {
                 const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
-                const done = tasks.filter(t => t.data().status === 'completed' || t.data().status === 'Done').length;
+                const done = tasks.filter(t => t.data().status === 'Done' || t.data().status === 'completed').length;
                 const perc = tasks.length > 0 ? Math.round((done/tasks.length)*100) : 0;
                 container.innerHTML += `<div style="background:var(--surface); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${d.data().name}</strong><span>${perc}% Complete</span></div>
@@ -768,7 +773,7 @@
             const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
             teamSnap.forEach(teamDoc => {
                 const teamTasks = tSnap.docs.filter(t => t.data().assignedTeamId === teamDoc.id);
-                tBody.innerHTML += `<tr><td>${teamDoc.data().name}</td><td><strong>${teamTasks.length}</strong></td><td style="color:#64748b">${teamTasks.filter(t => t.data().status==='to-do'||t.data().status==='assigned').length}</td><td style="color:#2563eb">${teamTasks.filter(t => t.data().status==='in-progress'||t.data().status==='WIP').length}</td><td style="color:#10b981">${teamTasks.filter(t => t.data().status==='completed'||t.data().status==='Done').length}</td></tr>`;
+                tBody.innerHTML += `<tr><td>${teamDoc.data().name}</td><td><strong>${teamTasks.length}</strong></td><td style="color:#64748b">${teamTasks.filter(t => t.data().status==='To Do'||t.data().status==='to-do'||t.data().status==='assigned').length}</td><td style="color:#2563eb">${teamTasks.filter(t => t.data().status==='WIP'||t.data().status==='in-progress').length}</td><td style="color:#10b981">${teamTasks.filter(t => t.data().status==='Done'||t.data().status==='completed').length}</td></tr>`;
             });
         };
 
@@ -779,6 +784,11 @@
                 const tb = document.getElementById('admin-notif-table-body'); tb.innerHTML = '';
                 let docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 docs.sort((a, b) => b.timestamp - a.timestamp);
+                
+                const hasUnread = docs.some(n => !n.read);
+                const dot = document.getElementById('admin-notif-dot');
+                if(dot) hasUnread ? dot.classList.remove('hidden') : dot.classList.add('hidden');
+
                 docs.slice(0, 100).forEach(n => {
                     tb.innerHTML += `<tr style="background:${n.read?'transparent':'rgba(37,99,235,0.05)'}"><td>${n.message}<br><small style="color:#64748b">${new Date(n.timestamp).toLocaleString()}</small></td><td><button onclick="toggleBookmark('${n.id}', ${n.bookmarked})">${n.bookmarked ? '⭐' : '☆'}</button></td></tr>`;
                 });
@@ -802,7 +812,9 @@
             document.getElementById('mp-em-num').value = data.emergencyPhone || "";
             
             onSnapshot(query(collection(db, "tasks"), where("assignedToEmail", "==", email)), async (snap) => {
-                const tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                let tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                tasks.sort((a, b) => (b.assignedTimestamp || 0) - (a.assignedTimestamp || 0));
+
                 const projs = await getDocs(collection(db, "projects"));
                 const pMap = {}; projs.forEach(p => pMap[p.id] = p.data().name);
                 await checkOverdueAndNotify(tasks);
@@ -905,6 +917,11 @@
                 const tb = document.getElementById('member-notif-table-body'); tb.innerHTML = '';
                 let docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 docs.sort((a, b) => b.timestamp - a.timestamp); 
+                
+                const hasUnread = docs.some(n => !n.read);
+                const dot = document.getElementById('member-notif-dot');
+                if(dot) hasUnread ? dot.classList.remove('hidden') : dot.classList.add('hidden');
+
                 docs.slice(0, 100).forEach(n => {
                     tb.innerHTML += `<tr style="background:${n.read?'transparent':'rgba(37,99,235,0.05)'}"><td>${n.message}<br><small style="color:#64748b">${new Date(n.timestamp).toLocaleString()}</small></td><td><button onclick="toggleBookmark('${n.id}', ${n.bookmarked})">${n.bookmarked ? '⭐' : '☆'}</button></td></tr>`;
                 });
