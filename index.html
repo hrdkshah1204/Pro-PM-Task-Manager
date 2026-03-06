@@ -45,6 +45,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: rgba(0,0,0,0.03); font-weight: 600; color: var(--text); font-size: 14px; }
+        .action-btns { display: flex; gap: 8px; }
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
@@ -66,10 +67,7 @@
             font-size: 13px; 
         }
 
-        /* Settings Specific Header */
         .settings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-        .subscription-badge { text-align: right; }
-        .sub-status { font-size: 14px; color: #64748b; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -249,8 +247,8 @@
             <div id="sub7" class="sub-page hidden">
                 <div class="settings-header">
                     <h3>Workspace Settings</h3>
-                    <div class="subscription-badge">
-                        <div class="sub-status">Subscription: <strong>Free</strong></div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Subscription: <strong>Free</strong></div>
                         <button style="padding: 6px 12px; font-size: 12px;">Upgrade to Pro</button>
                     </div>
                 </div>
@@ -279,14 +277,14 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label>Company Address</label>
-                        <textarea id="set-address" rows="3" placeholder="Add your company communication address here..."></textarea>
+                        <textarea id="set-address" rows="3" placeholder="Company communication address..."></textarea>
                     </div>
                     <button onclick="updateAdminProfile()">Update Workspace Details</button>
                     
                     <hr style="margin: 30px 0; border: 0; border-top: 1px solid var(--border);">
                     
                     <h4>Personalization</h4>
-                    <p style="font-size: 14px; color: #64748b;">Select your workspace theme preference.</p>
+                    <p style="font-size: 14px; color: #64748b;">Workspace theme preference.</p>
                     <div style="display: flex; gap: 15px; margin-top: 15px;">
                         <button class="outline" onclick="setTheme('light')" style="flex: 1; padding: 20px;">☀️ White Theme</button>
                         <button class="outline" onclick="setTheme('dark')" style="flex: 1; padding: 20px; background: #1e293b; color: white; border: none;">🌑 Black Theme</button>
@@ -327,20 +325,10 @@
 
         window.toggleAuthMode = () => {
             isRegistrationMode = !isRegistrationMode;
-            const title = document.getElementById('auth-title');
-            const primaryBtn = document.getElementById('btn-primary-auth');
-            const toggleBtn = document.getElementById('btn-toggle-auth');
-            if (isRegistrationMode) {
-                title.innerText = "Join ProPM";
-                primaryBtn.innerText = "Register Now";
-                primaryBtn.setAttribute("onclick", "registerUser()");
-                toggleBtn.innerText = "Back to Login";
-            } else {
-                title.innerText = "ProPM";
-                primaryBtn.innerText = "Sign In";
-                primaryBtn.setAttribute("onclick", "signInWithEmail()");
-                toggleBtn.innerText = "Create Account";
-            }
+            document.getElementById('auth-title').innerText = isRegistrationMode ? "Join ProPM" : "ProPM";
+            document.getElementById('btn-primary-auth').innerText = isRegistrationMode ? "Register Now" : "Sign In";
+            document.getElementById('btn-primary-auth').setAttribute("onclick", isRegistrationMode ? "registerUser()" : "signInWithEmail()");
+            document.getElementById('btn-toggle-auth').innerText = isRegistrationMode ? "Back to Login" : "Create Account";
         };
 
         window.signInWithEmail = () => {
@@ -383,16 +371,22 @@
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name || user.email);
                     document.getElementById('display-org-name').innerText = data.company || "ProPM Workspace";
                     
-                    // Populate Expanded Settings Fields
+                    // Pre-fill Settings
                     document.getElementById('set-name').value = data.name || "";
                     document.getElementById('set-email').value = user.email;
-                    document.getElementById('set-phone').value = data.phone || "Not Provided";
+                    document.getElementById('set-phone').value = data.phone || "";
                     document.getElementById('set-role').value = data.role ? data.role.toUpperCase() : "ADMIN";
                     document.getElementById('set-company').value = data.company || "";
                     document.getElementById('set-size').value = data.teamSize || "1 - 10";
                     document.getElementById('set-address').value = data.companyAddress || "";
 
-                    loadProjectsTable();
+                    // Welcome Popup for Free Feature detail
+                    if(!sessionStorage.getItem('welcome-shown')) {
+                        alert("Welcome to ProPM Free Tier!\n\nLimits:\n- 20 Projects\n- 10 Tasks per project (200 Total)\n- 5 Teams\n- 10 Members per team (50 Total)\n\nUpgrade to Pro for unlimited access!");
+                        sessionStorage.setItem('welcome-shown', 'true');
+                    }
+                    
+                    navTo('sub1'); // Landing to Sub Page 1
                 } else {
                     document.getElementById('onboarding-view').classList.remove('hidden');
                     document.getElementById('login-view').classList.add('hidden');
@@ -409,7 +403,7 @@
                 name: document.getElementById('ob-name').value, 
                 workspaceName: document.getElementById('ob-workspace-name').value,
                 company: document.getElementById('ob-company').value,
-                teamSize: document.getElementById('ob-size').value, // Captured at onboarding
+                teamSize: document.getElementById('ob-size').value,
                 onboardingComplete: true, role: 'admin' 
             }, { merge: true });
             location.reload();
@@ -428,25 +422,19 @@
             if(pageId === 'sub6') runAnalytics();
         };
 
-        // --- UPDATED RESTRICTED SETTINGS LOGIC ---
         window.updateAdminProfile = async () => {
             const user = auth.currentUser;
-            const newAddress = document.getElementById('set-address').value;
-            const newSize = document.getElementById('set-size').value;
-            
-            // Only Address and Team Size are updated
-            try {
-                await updateDoc(doc(db, "users", user.email), { 
-                    companyAddress: newAddress,
-                    teamSize: newSize
-                });
-                alert("Workspace information updated successfully!");
-            } catch (e) {
-                alert("Update failed: " + e.message);
-            }
+            await updateDoc(doc(db, "users", user.email), { 
+                companyAddress: document.getElementById('set-address').value,
+                teamSize: document.getElementById('set-size').value
+            });
+            alert("Settings Updated!");
         };
 
-        // --- SUB PAGE 1: PROJECTS ---
+
+	//--------------------------------------------------
+        //-------- SUB PAGE 1: PROJECTS (LIMIT 20) ---------
+	//--------------------------------------------------
         window.saveProject = async () => {
             const user = auth.currentUser;
             const name = document.getElementById('p-name').value.trim();
@@ -454,12 +442,17 @@
             const desc = document.getElementById('p-desc').value.trim();
             const editId = document.getElementById('edit-project-id').value;
 
-            if(!name || !date || !desc) return alert("Missing details! Name, Date, and Description are required.");
+            if(!name || !date || !desc) return alert("Missing details!");
 
             if(!editId) {
+                // Limit Check
+                const countSnap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
+                if(countSnap.size >= 20) return alert("Free Tier Limit Reached: Max 20 projects allowed. Upgrade to Pro for more.");
+                
+                // Failsafe
                 const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name), where("endDate", "==", date));
                 const dupSnap = await getDocs(dupCheck);
-                if(!dupSnap.empty) return alert("A project with the same name and date already exists.");
+                if(!dupSnap.empty) return alert("Project exists.");
             }
 
             const data = { name, endDate: date, description: desc, createdBy: user.email, status: 'active' };
@@ -476,18 +469,15 @@
             tbody.innerHTML = '';
             snap.forEach(d => {
                 const p = d.data();
-                tbody.innerHTML += `<tr><td>${p.name}</td><td>${p.endDate || 'N/A'}</td><td>
+                tbody.innerHTML += `<tr><td>${p.name}</td><td>${p.endDate}</td><td>
                     <select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
                         <option value="active" ${p.status==='active'?'selected':''}>Active</option>
-                        <option value="on-hold" ${p.status==='on-hold'?'selected':''}>On Hold</option>
                         <option value="completed" ${p.status==='completed'?'selected':''}>Completed</option>
                     </select></td>
-                    <td class="action-btns"><button class="outline" onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Delete</button></td></tr>`;
+                    <td class="action-btns"><button class="outline" onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Del</button></td></tr>`;
             });
         };
-
-        window.updateProjectStatus = async (id, s) => { await updateDoc(doc(db, "projects", id), { status: s }); };
-        
+        window.updateProjectStatus = async (id, s) => await updateDoc(doc(db, "projects", id), { status: s });
         window.editProject = async (id) => {
             const d = await getDoc(doc(db, "projects", id));
             const p = d.data();
@@ -495,26 +485,26 @@
             document.getElementById('p-desc').value = p.description; document.getElementById('edit-project-id').value = id;
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
         };
+        window.cancelEdit = () => { document.getElementById('edit-project-id').value = ''; document.getElementById('btn-cancel-edit').classList.add('hidden'); };
+        window.deleteProject = async (id) => { if(confirm("Del?")) { await deleteDoc(doc(db,"projects",id)); loadProjectsTable(); } };
 
-        window.cancelEdit = () => {
-            document.getElementById('edit-project-id').value = '';
-            document.getElementById('p-name').value = ''; document.getElementById('p-date').value = ''; document.getElementById('p-desc').value = '';
-            document.getElementById('btn-cancel-edit').classList.add('hidden');
-        };
 
-        window.deleteProject = async (id) => { if(confirm("Delete project?")) { await deleteDoc(doc(db,"projects",id)); loadProjectsTable(); } };
-
-        // --- SUB PAGE 2: TASKS ---
+	//--------------------------------------------------
+        // --- SUB PAGE 2: TASKS (LIMIT 10 PER PROJECT) ---
+	//--------------------------------------------------
         window.loadProjectDropdown = async () => {
-            const user = auth.currentUser;
-            const q = query(collection(db, "projects"), where("createdBy", "==", user.email));
-            const snap = await getDocs(q);
-            const dd = document.getElementById('t-project-id'); dd.innerHTML = '<option value="">-- Select Project --</option>';
+            const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email)));
+            const dd = document.getElementById('t-project-id'); dd.innerHTML = '<option value="">Select Project</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         window.saveTask = async () => {
             const pid = document.getElementById('t-project-id').value;
-            if(!pid) return alert("Select a project.");
+            if(!pid) return alert("Select project.");
+            
+            // Limit Check: 10 per project
+            const taskSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
+            if(taskSnap.size >= 10) return alert("Free Tier Limit: Max 10 tasks per project.");
+            
             await addDoc(collection(db, "tasks"), {projectId: pid, description: document.getElementById('t-desc').value, status: "to-do"});
             document.getElementById('t-desc').value = ''; loadTasksTable();
         };
@@ -527,7 +517,7 @@
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
             pSnap.forEach(d => {
                 const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
-                tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${d.id}', event)">▶</button></td><td>${d.data().name}</td><td>${tasks.length} Tasks</td></tr>
+                tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${d.id}', event)">▶</button></td><td>${d.data().name}</td><td>${tasks.length} / 10</td></tr>
                 <tr id="details-${d.id}" class="task-details-row"><td colspan="3"><ul class="task-list">
                     ${tasks.map(t => `<li><span>${t.data().description}</span> <button class="danger" style="padding:4px 8px;" onclick="deleteTask('${t.id}')">X</button></li>`).join('')}
                 </ul></td></tr>`;
@@ -536,35 +526,44 @@
         window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
-        // --- SUB PAGE 3: TEAMS ---
+	//--------------------------------------------------
+        //---------- SUB PAGE 3: TEAMS (LIMIT 5) -----------
+	//--------------------------------------------------
         window.saveTeam = async () => {
             const user = auth.currentUser;
-            const name = document.getElementById('team-name').value;
+            const name = document.getElementById('team-name').value.trim();
             const editId = document.getElementById('edit-team-id').value;
-            if(editId) await updateDoc(doc(db, "teams", editId), {name});
-            else await addDoc(collection(db, "teams"), {name, createdBy: user.email, createdAt: new Date().toISOString()});
+            if(!name) return alert("Name required.");
+
+            if(!editId) {
+                const teamSnap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
+                if(teamSnap.size >= 5) return alert("Free Tier Limit: Max 5 teams allowed.");
+                await addDoc(collection(db, "teams"), {name, createdBy: user.email, createdAt: new Date().toISOString()});
+            } else {
+                await updateDoc(doc(db, "teams", editId), {name});
+            }
             cancelTeamEdit(); loadTeamsTable();
         };
         window.loadTeamsTable = async () => {
-            const user = auth.currentUser;
-            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
+            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
             const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button onclick="navTo('sub4')">+ Members</button></td><td class="action-btns"><button class="outline" onclick="editTeam('${d.id}')">Edit</button> <button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`);
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td class="action-btns"><button class="outline" onclick="editTeam('${d.id}')">Edit</button> <button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`);
         };
         window.editTeam = async (id) => { 
             const d = await getDoc(doc(db, "teams", id)); 
-            document.getElementById('team-name').value = d.data().name; 
-            document.getElementById('edit-team-id').value = id; 
+            document.getElementById('team-name').value = d.data().name; document.getElementById('edit-team-id').value = id; 
             document.getElementById('btn-cancel-team-edit').classList.remove('hidden');
         };
         window.cancelTeamEdit = () => { document.getElementById('team-name').value = ''; document.getElementById('edit-team-id').value = ''; document.getElementById('btn-cancel-team-edit').classList.add('hidden'); };
-        window.deleteTeam = async (id) => { if(confirm("Delete team?")) { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } };
+        window.deleteTeam = async (id) => { if(confirm("Del?")) { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } };
 
-        // --- SUB PAGE 4: MEMBERS ---
+
+	//--------------------------------------------------
+        //---- SUB PAGE 4: MEMBERS (LIMIT 10 PER TEAM) -----
+	//--------------------------------------------------
         window.loadTeamDropdownForMembers = async () => {
-            const user = auth.currentUser;
-            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
-            const dd = document.getElementById('m-team-id'); dd.innerHTML = '<option value="">-- Select Team --</option>';
+            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
+            const dd = document.getElementById('m-team-id'); dd.innerHTML = '<option value="">Select Team</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         window.saveMember = async () => {
@@ -572,52 +571,47 @@
             const email = document.getElementById('m-email').value.toLowerCase();
             const tid = document.getElementById('m-team-id').value;
             const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
-            if(!email || !tid) return alert("Fill required fields.");
+            if(!email || !tid) return alert("Missing fields.");
+
+            if(!document.getElementById('edit-member-id').value) {
+                // Team Limit check
+                const memSnap = await getDocs(query(collection(db, "users"), where("teamId", "==", tid)));
+                if(memSnap.size >= 10) return alert("Free Tier Limit: Max 10 members per team.");
+            }
+
             await setDoc(doc(db, "users", email), {name: document.getElementById('m-name').value, phone: document.getElementById('m-phone').value, teamId: tid, teamName: tname, role: 'member', email, adminEmail: user.email}, {merge: true});
             cancelMemberEdit(); loadMembersTable();
         };
         window.editMember = async (email) => {
             const d = await getDoc(doc(db, "users", email));
             const m = d.data();
-            document.getElementById('m-name').value = m.name;
-            document.getElementById('m-email').value = m.email;
-            document.getElementById('m-email').disabled = true;
-            document.getElementById('m-phone').value = m.phone;
-            document.getElementById('m-team-id').value = m.teamId;
-            document.getElementById('edit-member-id').value = email;
-            document.getElementById('btn-save-member').innerText = "Update Member";
+            document.getElementById('m-name').value = m.name; document.getElementById('m-email').value = m.email;
+            document.getElementById('m-email').disabled = true; document.getElementById('m-phone').value = m.phone;
+            document.getElementById('m-team-id').value = m.teamId; document.getElementById('edit-member-id').value = email;
             document.getElementById('btn-cancel-member').classList.remove('hidden');
         };
         window.cancelMemberEdit = () => {
-            document.getElementById('m-name').value = '';
-            document.getElementById('m-email').value = '';
-            document.getElementById('m-email').disabled = false;
-            document.getElementById('m-phone').value = '';
-            document.getElementById('m-team-id').value = '';
-            document.getElementById('edit-member-id').value = '';
-            document.getElementById('btn-save-member').innerText = "Save Member";
+            document.getElementById('m-name').value = ''; document.getElementById('m-email').value = '';
+            document.getElementById('m-email').disabled = false; document.getElementById('edit-member-id').value = '';
             document.getElementById('btn-cancel-member').classList.add('hidden');
         };
         window.loadMembersTable = async () => {
-            const user = auth.currentUser;
-            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)));
+            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", auth.currentUser.email)));
             const tbody = document.getElementById('member-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td><td class="action-btns">
-                <button class="outline" onclick="editMember('${d.id}')">Edit</button>
-                <button class="danger" onclick="deleteMember('${d.id}')">Del</button>
-            </td></tr>`);
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td class="action-btns"><button class="outline" onclick="editMember('${d.id}')">Edit</button><button class="danger" onclick="deleteMember('${d.id}')">Del</button></td></tr>`);
         };
-        window.deleteMember = async (id) => { if(confirm("Remove member?")) { await deleteDoc(doc(db, "users", id)); loadMembersTable(); } };
+        window.deleteMember = async (id) => { if(confirm("Del?")) { await deleteDoc(doc(db, "users", id)); loadMembersTable(); } };
 
-        // --- SUB PAGE 5: ASSIGNMENTS ---
+
+	//--------------------------------------------------
+        //---- SUB PAGE 5: ASSIGNMENT & MANUAL STATUS ------
+	//--------------------------------------------------
         window.workspaceTeams = []; window.workspaceMembers = [];
         window.loadAssignProjectDropdown = async () => {
-            const user = auth.currentUser;
-            const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
+            const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email)));
             const dd = document.getElementById('assign-project-select'); dd.innerHTML = '<option value="">-- Select Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
-
         window.fetchTeamsAndMembers = async () => {
             const user = auth.currentUser;
             const [tSnap, mSnap] = await Promise.all([
@@ -627,15 +621,10 @@
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         };
-
         window.loadAssignmentTable = async () => {
             const pid = document.getElementById('assign-project-select').value;
             if(!pid) return;
-            const [tSnap, tbody, sbody] = [
-                await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid))), 
-                document.getElementById('assign-table-body'), 
-                document.getElementById('allocation-summary-body')
-            ];
+            const [tSnap, tbody, sbody] = [await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid))), document.getElementById('assign-table-body'), document.getElementById('allocation-summary-body')];
             tbody.innerHTML = ''; sbody.innerHTML = '';
             tSnap.forEach(d => {
                 const t = d.data();
@@ -649,31 +638,22 @@
                     </select></td></tr>`;
             });
         };
-
-        window.updateRowMembers = (tid) => {
-            const teamId = document.getElementById(`t-${tid}`).value; 
-            const filtered = window.workspaceMembers.filter(m => m.teamId === teamId);
-            document.getElementById(`m-${tid}`).innerHTML = filtered.map(m => `<option value="${m.email}">${m.name}</option>`).join('');
-        };
-
+        window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         window.assignSpecificTask = async (tid) => {
             const email = document.getElementById(`m-${tid}`).value;
-            const teamId = document.getElementById(`t-${tid}`).value;
-            const teamName = document.getElementById(`t-${tid}`).options[document.getElementById(`t-${tid}`).selectedIndex].text;
+            const tId = document.getElementById(`t-${tid}`).value;
+            const tName = document.getElementById(`t-${tid}`).options[document.getElementById(`t-${tid}`).selectedIndex].text;
             const member = window.workspaceMembers.find(m => m.email === email);
-            if (!email || !teamId) return alert("Select both team and member.");
-            try {
-                await updateDoc(doc(db, "tasks", tid), { 
-                    assignedToEmail: email, assignedToName: member.name, 
-                    assignedTeamName: teamName, assignedTeamId: teamId, status: 'assigned' 
-                });
-                loadAssignmentTable();
-            } catch (e) { console.error(e); }
+            if (!email || !tId) return alert("Select team and member.");
+            await updateDoc(doc(db, "tasks", tid), { assignedToEmail: email, assignedToName: member.name, assignedTeamName: tName, assignedTeamId: tId, status: 'assigned' });
+            loadAssignmentTable();
         };
+        window.manualStatusUpdate = async (tid, s) => await updateDoc(doc(db, "tasks", tid), { status: s });
 
-        window.manualStatusUpdate = async (tid, s) => { await updateDoc(doc(db, "tasks", tid), { status: s }); };
+	//--------------------------------------------------
+        //---------- SUB PAGE 6: ANALYTICS -----------------
+	//--------------------------------------------------
 
-        // --- SUB PAGE 6: ANALYTICS ---
         window.runAnalytics = async () => {
             const user = auth.currentUser;
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
@@ -685,15 +665,12 @@
             document.getElementById('stat-projects').innerText = pSnap.size;
             document.getElementById('stat-teams').innerText = teamSnap.size;
             document.getElementById('stat-members').innerText = mSnap.size;
-            
             const container = document.getElementById('project-progress-container'); container.innerHTML = '<h3>Project Progress</h3>';
             pSnap.forEach(d => {
                 const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
-                const done = tasks.filter(t => t.data().status === 'completed').length;
-                const perc = tasks.length > 0 ? Math.round((done/tasks.length)*100) : 0;
-                container.innerHTML += `<div style="margin-bottom:10px;">${d.data().name}: ${perc}%<div style="width:100%; background:#e2e8f0; height:8px; border-radius:4px;"><div style="width:${perc}%; background:var(--primary); height:8px; border-radius:4px;"></div></div></div>`;
+                const perc = tasks.length > 0 ? Math.round((tasks.filter(t => t.data().status === 'completed').length/tasks.length)*100) : 0;
+                container.innerHTML += `<div>${d.data().name}: ${perc}%</div>`;
             });
-
             const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
             teamSnap.forEach(teamDoc => {
                 const teamTasks = tSnap.docs.filter(t => t.data().assignedTeamId === teamDoc.id);
