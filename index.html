@@ -66,6 +66,8 @@
         .card-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
         .card-table tr:last-child td { border-bottom: none; }
 
+        .expand-btn { background: transparent; border: none; color: var(--primary); font-size: 18px; font-weight: bold; cursor: pointer; padding: 5px; width: 30px; text-align: center; }
+        
         .stats-summary { width: 100%; margin-top: 20px; text-align: center; }
         .stats-summary td { font-size: 18px; font-weight: 800; color: var(--primary); }
         .settings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
@@ -166,7 +168,18 @@
                         <textarea id="t-details" rows="2" placeholder="Add specific task instructions..."></textarea>
                     </div>
                     <button onclick="saveTask()">Save Task</button>
-                    <table><thead><tr><th style="width:30px;"></th><th>Project Name</th><th>Tasks Count</th></tr></thead><tbody id="tasks-table-body"></tbody></table>
+                    
+                    <h3 style="margin-top: 30px;">Project Task Lists</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align: center;">View</th>
+                                <th>Project Name</th>
+                                <th>Tasks Count</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-table-body"></tbody>
+                    </table>
                 </div>
 
                 <div id="sub3" class="sub-page hidden">
@@ -532,7 +545,6 @@
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         
-        // ADMIN PHASE 1 UPDATE: Captures Specific Task Details
         window.saveTask = async () => {
             const pid = document.getElementById('t-project-id').value;
             const tdesc = document.getElementById('t-desc').value.trim();
@@ -546,18 +558,65 @@
             document.getElementById('t-desc').value = ''; document.getElementById('t-details').value = ''; 
             loadTasksTable();
         };
+
+        // FIXED: Sub Page 2 Task Table rendering correctly formatted sub-tables
         window.loadTasksTable = async () => {
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
+            
             pSnap.forEach(d => {
                 const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
-                tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleTaskRow('${d.id}', event)">▶</button></td><td>${d.data().name}</td><td>${tasks.length} / 10</td></tr>
-                <tr id="details-${d.id}" class="task-details-row"><td colspan="3"><ul class="task-list">
-                    ${tasks.map(t => `<li><span>${t.data().description}</span> <button class="danger" onclick="deleteTask('${t.id}')">X</button></li>`).join('')}
-                </ul></td></tr>`;
+                
+                let taskRowsHTML = '';
+                if (tasks.length === 0) {
+                    taskRowsHTML = `<tr><td colspan="3" style="text-align: center; color: #64748b; padding: 15px;">No tasks created for this project yet.</td></tr>`;
+                } else {
+                    taskRowsHTML = tasks.map(t => `
+                        <tr style="background: var(--surface);">
+                            <td style="padding-left: 20px; border-right: 1px solid var(--border); width: 30%;"><strong>${t.data().description}</strong></td>
+                            <td style="border-right: 1px solid var(--border); color: #475569; font-size: 13px;">${t.data().taskDetails || ''}</td>
+                            <td style="width: 60px; text-align: center;"><button class="danger" onclick="deleteTask('${t.id}')" style="padding: 6px 10px;">X</button></td>
+                        </tr>
+                    `).join('');
+                }
+
+                tbody.innerHTML += `
+                <tr style="background: rgba(37, 99, 235, 0.05); border-bottom: 1px solid var(--border);">
+                    <td style="text-align: center;"><button class="expand-btn" onclick="toggleTaskRow('${d.id}', event)">▶</button></td>
+                    <td style="font-weight: 700;">${d.data().name}</td>
+                    <td style="font-weight: 600; color: #64748b;">${tasks.length} / 10</td>
+                </tr>
+                <tr id="details-${d.id}" style="display: none; background: var(--bg);">
+                    <td colspan="3" style="padding: 0; border-bottom: 2px solid var(--primary);">
+                        <table style="width: 100%; margin: 0; box-shadow: none; border-radius: 0;">
+                            <thead style="background: rgba(0,0,0,0.02);">
+                                <tr>
+                                    <th style="padding-left: 20px; font-size: 12px; color: #64748b;">Task Name</th>
+                                    <th style="font-size: 12px; color: #64748b;">Task Details</th>
+                                    <th style="font-size: 12px; color: #64748b; text-align: center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${taskRowsHTML}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>`;
             });
         };
-        window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
+
+        // FIXED: Replaced CSS toggle with strict inline display toggle to guarantee it stays hidden until clicked
+        window.toggleTaskRow = (id, e) => { 
+            const row = document.getElementById(`details-${id}`); 
+            if (row.style.display === 'none' || row.style.display === '') {
+                row.style.display = 'table-row';
+                e.target.innerText = '▼';
+            } else {
+                row.style.display = 'none';
+                e.target.innerText = '▶';
+            }
+        };
+
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
         window.saveTeam = async () => {
@@ -845,7 +904,6 @@
             const grid = document.getElementById('m-task-grid'); grid.innerHTML = '';
             let s = { total: tasks.length, done: 0, wip: 0, todo: 0, hold: 0 };
             
-            // 1. Group Tasks by Project
             const tasksByProject = {};
             tasks.forEach(t => {
                 const isDone = (t.status === 'Done' || t.status === 'completed');
@@ -858,7 +916,6 @@
                 tasksByProject[t.projectId].push(t);
             });
 
-            // 2. Render Clubbed Tables
             for (const [pid, pTasks] of Object.entries(tasksByProject)) {
                 const projectData = pMap[pid] || { name: 'Unknown Project', description: 'No project details available.' };
                 
@@ -876,10 +933,9 @@
                     const disabledAttr = isDone ? 'disabled' : '';
                     const minDate = t.assignedAt || ''; 
 
-                    // History Array Mapping (Phase 2)
                     let historyList = t.commentHistory || [];
                     if (historyList.length === 0 && t.memberComment) {
-                        historyList = [{ date: "Legacy Note", text: t.memberComment }]; // Fallback for old tasks
+                        historyList = [{ date: "Legacy Note", text: t.memberComment }]; 
                     }
                     
                     let historyHTML = '';
@@ -944,7 +1000,6 @@
             document.getElementById('m-stat-hold').innerText = s.hold;
         }
 
-        // USER UPDATE LOGIC (Phase 2 Array Push)
         window.submitTaskUpdate = async (tid) => {
             try {
                 const stat = document.getElementById(`stat-${tid}`).value;
