@@ -113,29 +113,22 @@
         <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
     </div>
 
-   <div id="admin-view" class="hidden">
-    <div class="sidebar">
-        <div class="brand-logo">ProPM</div>
-        <button class="sidebar-btn active" onclick="navTo('sub1')">1. Create Project</button>
+<div id="admin-view" class="hidden">
+        <div class="sidebar">
+            <div class="brand-logo">ProPM</div>
+            <button class="sidebar-btn active" onclick="navTo('sub1')">1. Create Project</button>
+            <button class="sidebar-btn" onclick="navTo('sub3')">2. Add Teams</button>
+            <button class="sidebar-btn" onclick="navTo('sub5')">3. Assign Project</button>
+            <button class="sidebar-btn" onclick="navTo('sub6')">4. Analytics</button>
 
-        <!-- <button class="sidebar-btn" onclick="navTo('sub2')">2. Create Tasks</button> -->
-
-        <button class="sidebar-btn" onclick="navTo('sub3')">2. Add Teams</button>
-
-        <!-- <button class="sidebar-btn" onclick="navTo('sub4')">4. Add Members</button> -->
-
-        <button class="sidebar-btn" onclick="navTo('sub5')">3. Assign Project</button>
-        <button class="sidebar-btn" onclick="navTo('sub6')">4. Analytics</button>
-
-        <div style="flex: 1;"></div>
-        <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
-            <div class="org-badge" id="display-org-name">Organization</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">Logged in as</div>
-            <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">Admin Name</div>
-            <div class="role-pill">ADMIN</div>
-        </div>
-    </div>
-</div>
+            <div style="flex: 1;"></div>
+            <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
+                <div class="org-badge" id="display-org-name">Organization</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 5px;">Logged in as</div>
+                <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">Admin Name</div>
+                <div class="role-pill">ADMIN</div>
+            </div>
+        </div> <div class="view-container">
 
         <div class="view-container">
             <div class="top-quick-access">
@@ -576,7 +569,7 @@
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         
-        window.window.saveTask = async () => {
+	window.saveTask = async () => {
             const pid = document.getElementById('t-project-id').value;
             const tdesc = document.getElementById('t-desc').value.trim();
             const tdetails = document.getElementById('t-details').value.trim();
