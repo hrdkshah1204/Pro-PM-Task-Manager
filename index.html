@@ -567,7 +567,7 @@
             loadTasksTable();
         };
 
-        
+        window.loadTasksTable = async () => {
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
             
