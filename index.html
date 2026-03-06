@@ -567,7 +567,7 @@
             loadTasksTable();
         };
 
-        window.loadTasksTable = async () => {
+        
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
             
@@ -731,11 +731,27 @@
         };
 
         window.workspaceTeams = []; window.workspaceMembers = [];
-        window.loadAssignProjectDropdown = async () => {
+
+	window.lastSelectedProjectId = "";
+
+       window.loadAssignProjectDropdown = async () => {
             const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email)));
-            const dd = document.getElementById('assign-project-select'); dd.innerHTML = '<option value="">-- Project --</option>';
+            const dd = document.getElementById('assign-project-select'); 
+            dd.innerHTML = '<option value="">-- Select Project --</option>';
+            
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
+            
+            // SMART BUG FIX: If there is a last selected project, re-select it automatically
+            if (window.lastSelectedProjectId) {
+                dd.value = window.lastSelectedProjectId;
+                window.loadAssignmentTable(); 
+            } else {
+                // If no project is selected, strictly clear the tables to prevent "ghost" tasks
+                document.getElementById('assign-table-body').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b;">Please select a project above to assign tasks.</td></tr>';
+                document.getElementById('allocation-summary-body').innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b;">Please select a project above to view summary.</td></tr>';
+            }
         };
+
         window.fetchTeamsAndMembers = async () => {
             const [tSnap, mSnap] = await Promise.all([
                 getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email))), 
@@ -747,10 +763,21 @@
 
         window.loadAssignmentTable = async () => {
             const pid = document.getElementById('assign-project-select').value;
-            if(!pid) return;
+            window.lastSelectedProjectId = pid; // Save current selection to memory
+            
+            const tb = document.getElementById('assign-table-body'); 
+            const sb = document.getElementById('allocation-summary-body'); 
+            
+            if(!pid) {
+                tb.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b;">Please select a project above to assign tasks.</td></tr>';
+                sb.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b;">Please select a project above to view summary.</td></tr>';
+                return;
+            }
+
+            tb.innerHTML = '';
+            sb.innerHTML = '';
+            
             const tSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
-            const tb = document.getElementById('assign-table-body'); tb.innerHTML = '';
-            const sb = document.getElementById('allocation-summary-body'); sb.innerHTML = '';
             
             await checkOverdueAndNotify(tSnap.docs.map(d => ({id: d.id, ...d.data()})));
 
@@ -761,14 +788,21 @@
                     assigneeDisplay = `<span style="color: #ef4444; font-weight: bold;">${t.assignedToName} (Deleted)</span>`;
                 }
 
-                tb.innerHTML += `<tr>
-                    <td>${t.description}</td>
-                    <td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">-- Select Team --</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td>
-                    <td><select id="m-${d.id}"><option value="">-- Member --</option></select></td>
-                    <td><input type="date" id="date-${d.id}" value="${t.targetDate || ''}"></td>
-                    <td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td>
-                </tr>`;
+                // LOGIC UPGRADE: Check if the task is completed
+                const isDone = (t.status === 'Done' || t.status === 'completed');
+
+                // TOP TABLE: Only render the row if the task is NOT done
+                if (!isDone) {
+                    tb.innerHTML += `<tr>
+                        <td>${t.description}</td>
+                        <td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">-- Select Team --</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td>
+                        <td><select id="m-${d.id}"><option value="">-- Member --</option></select></td>
+                        <td><input type="date" id="date-${d.id}" value="${t.targetDate || ''}"></td>
+                        <td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td>
+                    </tr>`;
+                }
                 
+                // BOTTOM TABLE: Render ALL tasks (History/Summary)
                 sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${assigneeDisplay}</td><td>
                     <select onchange="manualStatusUpdate('${d.id}', this.value)" style="padding:4px; font-size:12px;">
                         <option value="To Do" ${t.status==='To Do'||t.status==='to-do'?'selected':''}>To Do</option>
@@ -778,7 +812,16 @@
                         <option value="Done" ${t.status==='Done'||t.status==='completed'?'selected':''}>Done</option>
                     </select></td></tr>`;
             });
+
+            // BEAUTIFICATION: Add friendly messages if tables are empty
+            if (tb.innerHTML === '') {
+                tb.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b; font-style: italic; padding: 20px;">🎉 All pending tasks have been assigned and completed!</td></tr>';
+            }
+            if (sb.innerHTML === '') {
+                sb.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b; font-style: italic; padding: 20px;">No tasks exist for this project yet.</td></tr>';
+            }
         };
+
         
         window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = '<option value="">-- Select Member --</option>' + window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         
