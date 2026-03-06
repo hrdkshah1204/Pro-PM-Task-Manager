@@ -401,53 +401,90 @@
             alert("Phone Updated!");
         };
 
-        // SUB 1: PROJECTS (NOW WITH USER PRIVACY FILTER)
+
+	//--------------------------------------------------------------
+        //-----------SUB 1: PROJECTS (NOW WITH USER PRIVACY FILTER)-----
+	//--------------------------------------------------------------
+        // --- SUB PAGE 1 LOGIC ---
         window.saveProject = async () => {
             const user = auth.currentUser;
-            const name = document.getElementById('p-name').value;
+            const name = document.getElementById('p-name').value.trim();
+            const date = document.getElementById('p-date').value;
+            const desc = document.getElementById('p-desc').value.trim();
             const editId = document.getElementById('edit-project-id').value;
-            const obj = { name, endDate: document.getElementById('p-date').value, description: document.getElementById('p-desc').value, createdBy: user.email, createdAt: new Date().toISOString() };
-            if(editId) await updateDoc(doc(db, "projects", editId), obj);
-            else await addDoc(collection(db, "projects"), obj);
+
+            if(!name || !date || !desc) return alert("Missing details! Please provide Name, End Date, and Description.");
+
+            // Failsafe: check for duplicates (same name and date for this admin)
+            if(!editId) {
+                const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name), where("endDate", "==", date));
+                const dupSnap = await getDocs(dupCheck);
+                if(!dupSnap.empty) return alert("A project with the exact same name and end date already exists.");
+            }
+
+            const payload = { name, endDate: date, description: desc, createdBy: user.email, status: 'active' };
+            
+            if(editId) {
+                await updateDoc(doc(db, "projects", editId), payload);
+            } else {
+                payload.createdAt = new Date().toISOString();
+                await addDoc(collection(db, "projects"), payload);
+            }
             cancelEdit(); loadProjectsTable();
         };
 
         window.loadProjectsTable = async () => {
             const user = auth.currentUser;
-            if(!user) return;
-            // FIXED: Only fetching projects created by THIS user email
             const q = query(collection(db, "projects"), where("createdBy", "==", user.email), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '';
             snap.forEach(d => {
-                tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().endDate}</td><td>
-                    <button onclick="editProject('${d.id}')">Edit</button>
-                    <button class="danger" onclick="deleteProject('${d.id}')">Delete</button>
-                </td></tr>`;
+                const p = d.data();
+                tbody.innerHTML += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.endDate || 'N/A'}</td>
+                    <td>
+                        <select onchange="updateProjectStatus('${d.id}', this.value)" style="padding:4px; font-size:12px;">
+                            <option value="active" ${p.status==='active'?'selected':''}>Active</option>
+                            <option value="on-hold" ${p.status==='on-hold'?'selected':''}>On Hold</option>
+                            <option value="completed" ${p.status==='completed'?'selected':''}>Completed</option>
+                        </select>
+                    </td>
+                    <td class="action-btns">
+                        <button class="outline" onclick="editProject('${d.id}')">Edit</button>
+                        <button class="danger" onclick="deleteProject('${d.id}')">Delete</button>
+                    </td>
+                </tr>`;
             });
         };
 
+        window.updateProjectStatus = async (id, s) => { await updateDoc(doc(db, "projects", id), { status: s }); };
+        
         window.editProject = async (id) => {
             const d = await getDoc(doc(db, "projects", id));
-            document.getElementById('p-name').value = d.data().name;
-            document.getElementById('p-date').value = d.data().endDate;
-            document.getElementById('p-desc').value = d.data().description;
+            const p = d.data();
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-date').value = p.endDate;
+            document.getElementById('p-desc').value = p.description;
             document.getElementById('edit-project-id').value = id;
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
         };
 
-        window.deleteProject = async (id) => { if(confirm("Delete this project?")) { await deleteDoc(doc(db, "projects", id)); loadProjectsTable(); } };
-
-        window.cancelEdit = () => { 
-            document.getElementById('edit-project-id').value = ''; 
-            document.getElementById('p-name').value = ''; 
-            document.getElementById('p-date').value = ''; 
-            document.getElementById('p-desc').value = ''; 
-            document.getElementById('btn-cancel-edit').classList.add('hidden'); 
+        window.cancelEdit = () => {
+            document.getElementById('edit-project-id').value = '';
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-date').value = '';
+            document.getElementById('p-desc').value = '';
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
         };
 
-        // SUB 2: TASKS
+        window.deleteProject = async (id) => { if(confirm("Delete project?")) { await deleteDoc(doc(db,"projects",id)); loadProjectsTable(); } };
+
+
+	//--------------------------------------------------------------
+        //---------------------SUB 2: TASKS-----------------------------
+	//--------------------------------------------------------------
         window.loadProjectDropdown = async () => {
             const user = auth.currentUser;
             const q = query(collection(db, "projects"), where("createdBy", "==", user.email));
@@ -479,7 +516,10 @@
         window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
-        // SUB 3: TEAMS (ALSO FILTERED)
+
+	//--------------------------------------------------------------
+        //-----------------SUB 3: TEAMS (ALSO FILTERED)-----------------
+	//--------------------------------------------------------------
         window.saveTeam = async () => {
             const user = auth.currentUser;
             const name = document.getElementById('team-name').value;
@@ -503,7 +543,10 @@
         window.cancelTeamEdit = () => { document.getElementById('team-name').value = ''; document.getElementById('edit-team-id').value = ''; document.getElementById('btn-cancel-team-edit').classList.add('hidden'); };
         window.deleteTeam = async (id) => { if(confirm("Delete team?")) { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } };
 
-        // SUB 4: MEMBERS (FILTERED)
+
+	//--------------------------------------------------------------
+        //---------------SUB 4: MEMBERS (FILTERED)----------------------
+	//--------------------------------------------------------------
         window.loadTeamDropdownForMembers = async () => {
             const user = auth.currentUser;
             const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
@@ -552,50 +595,89 @@
         };
         window.deleteMember = async (id) => { if(confirm("Remove member?")) { await deleteDoc(doc(db, "users", id)); loadMembersTable(); } };
 
-        // SUB 5: ASSIGNMENT
-        window.workspaceMembers = []; window.workspaceTeams = [];
+
+	//--------------------------------------------------------------
+	//---------------------- SUB PAGE 5 LOGIC ----------------------
+	//--------------------------------------------------------------
+        window.workspaceTeams = []; window.workspaceMembers = [];
         window.loadAssignProjectDropdown = async () => {
             const user = auth.currentUser;
             const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
             const dd = document.getElementById('assign-project-select'); dd.innerHTML = '<option value="">-- Select Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
+
         window.fetchTeamsAndMembers = async () => {
             const user = auth.currentUser;
             const [tSnap, mSnap] = await Promise.all([
-                getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email))), 
-                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)))
+                getDocs(collection(db, "teams")), 
+                getDocs(query(collection(db, "users"), where("role", "==", "member")))
             ]);
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         };
+
         window.loadAssignmentTable = async () => {
             const pid = document.getElementById('assign-project-select').value;
-            const tSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
-            const tbody = document.getElementById('assign-table-body'); tbody.innerHTML = '';
-            const sbody = document.getElementById('allocation-summary-body'); sbody.innerHTML = '';
+            if(!pid) return;
+            const [tSnap, tbody, sbody] = [
+                await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid))), 
+                document.getElementById('assign-table-body'), 
+                document.getElementById('allocation-summary-body')
+            ];
+            tbody.innerHTML = ''; sbody.innerHTML = '';
             tSnap.forEach(d => {
                 const t = d.data();
                 tbody.innerHTML += `<tr><td>${t.description}</td><td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">-- Team --</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td><td><select id="m-${d.id}"></select></td><td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td></tr>`;
-                sbody.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${t.assignedToName || 'Unassigned'}</td><td>${t.status}</td></tr>`;
+                sbody.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${t.assignedToName || 'Unassigned'}</td><td>
+                    <select onchange="manualStatusUpdate('${d.id}', this.value)" style="padding:4px; font-size:12px;">
+                        <option value="to-do" ${t.status==='to-do'?'selected':''}>To-Do</option>
+                        <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
+                        <option value="in-progress" ${t.status==='in-progress'?'selected':''}>In-Progress</option>
+                        <option value="completed" ${t.status==='completed'?'selected':''}>Completed</option>
+                    </select></td></tr>`;
             });
         };
+
         window.updateRowMembers = (tid) => {
-            const teamId = document.getElementById(`t-${tid}`).value;
+            const teamId = document.getElementById(`t-${tid}`).value; 
             const filtered = window.workspaceMembers.filter(m => m.teamId === teamId);
             document.getElementById(`m-${tid}`).innerHTML = filtered.map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         };
+
         window.assignSpecificTask = async (tid) => {
             const email = document.getElementById(`m-${tid}`).value;
             const teamId = document.getElementById(`t-${tid}`).value;
             const teamName = document.getElementById(`t-${tid}`).options[document.getElementById(`t-${tid}`).selectedIndex].text;
             const member = window.workspaceMembers.find(m => m.email === email);
-            if(!email || !teamId) return alert("Select team and member.");
-            await updateDoc(doc(db, "tasks", tid), { assignedToEmail: email, assignedToName: member.name, assignedTeamName: teamName, assignedTeamId: teamId, status: 'assigned' });
-            loadAssignmentTable();
+            if (!email || !teamId) return alert("Select both team and member.");
+            try {
+                await updateDoc(doc(db, "tasks", tid), { 
+                    assignedToEmail: email, assignedToName: member.name, 
+                    assignedTeamName: teamName, assignedTeamId: teamId, status: 'assigned' 
+                });
+                loadAssignmentTable();
+            } catch (e) { console.error(e); }
         };
 
-        // SUB 6: ANALYTICS
+        window.manualStatusUpdate = async (tid, s) => { await updateDoc(doc(db, "tasks", tid), { status: s }); };
+
+        // Helper navigation and standard Auth functions
+        window.navTo = (id) => {
+            document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'sub1') loadProjectsTable();
+            if(id === 'sub2') { loadTasksTable(); loadProjectDropdown(); }
+            if(id === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); }
+        };
+        window.signInWithEmail = () => signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+        window.signOutUser = () => signOut(auth);
+        window.toggleAuthMode = () => { /* basic toggle auth logic */ };
+
+	//--------------------------------------------------------------
+        //-----------------------SUB Page 6: ANALYTICS------------------
+	//--------------------------------------------------------------
         window.runAnalytics = async () => {
             const user = auth.currentUser;
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
