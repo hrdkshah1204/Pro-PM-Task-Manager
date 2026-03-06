@@ -192,7 +192,15 @@
                             <button id="btn-cancel-team-edit" class="outline hidden" onclick="cancelTeamEdit()">Cancel</button>
                         </div>
                     </div>
-                    <table><thead><tr><th>Team Name</th><th style="width: 250px;">Actions</th></tr></thead><tbody id="team-table-body"></tbody></table>
+                    <table>
+			<thead>
+				<tr>
+					<th>Team Name</th><th style="width: 250px;">Actions</th>
+//<th>Member Count Count</th>
+				</tr>
+			</thead>
+			<tbody id="team-table-body"></tbody>
+		</table>
                 </div>
 
                 <div id="sub4" class="sub-page hidden">
@@ -634,13 +642,39 @@
             } else { await updateDoc(doc(db, "teams", editId), {name: document.getElementById('team-name').value}); }
             document.getElementById('team-name').value = ''; loadTeamsTable();
         };
-        window.loadTeamsTable = async () => {
-            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
-            const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => {
-                tbody.innerHTML += `<tr><td>${d.data().name}</td><td class="action-btns"><button class="outline" onclick="navTo('sub4')">+ Members</button><button onclick="editTeam('${d.id}')">Edit</button><button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`;
+       
+	
+	 window.loadTeamsTable = async () => {
+            const adminEmail = auth.currentUser.email;
+            
+            // Fetch both teams AND members at the same time for efficiency
+            const [teamsSnap, membersSnap] = await Promise.all([
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", adminEmail))),
+                getDocs(query(collection(db, "users"), where("adminEmail", "==", adminEmail)))
+            ]);
+            
+            const tbody = document.getElementById('team-table-body'); 
+            tbody.innerHTML = '';
+            
+            teamsSnap.forEach(d => {
+                // Count how many members share this specific team's ID
+                const memberCount = membersSnap.docs.filter(m => m.data().teamId === d.id).length;
+                
+                tbody.innerHTML += `<tr>
+                    <td>${d.data().name}</td>
+                    <td class="action-btns" style="align-items: center;">
+                        <span style="font-size: 13px; color: #64748b; margin-right: 10px; font-weight: 600;">
+                            ${memberCount} / 10
+                        </span>
+                        <button class="outline" onclick="navTo('sub4')">+ Members</button>
+                        <button onclick="editTeam('${d.id}')">Edit</button>
+                        <button class="danger" onclick="deleteTeam('${d.id}')">Del</button>
+                    </td>
+                </tr>`;
             });
         };
+
+
         window.editTeam = async (id) => { 
             const d = await getDoc(doc(db, "teams", id)); 
             document.getElementById('team-name').value = d.data().name; document.getElementById('edit-team-id').value = id; 
