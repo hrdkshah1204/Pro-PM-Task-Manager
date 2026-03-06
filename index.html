@@ -66,12 +66,6 @@
         .card-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
         .card-table tr:last-child td { border-bottom: none; }
 
-        .expand-btn { background: transparent; border: none; color: var(--primary); font-size: 16px; cursor: pointer; padding: 0; width: 24px; text-align: center; }
-        .task-details-row { background: var(--bg); display: none; }
-        .task-details-row.open { display: table-row; }
-        .task-list { margin: 0; padding: 10px; list-style: none; background: var(--bg); }
-        .task-list li { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;}
-
         .stats-summary { width: 100%; margin-top: 20px; text-align: center; }
         .stats-summary td { font-size: 18px; font-weight: 800; color: var(--primary); }
         .settings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
@@ -161,21 +155,19 @@
                     </table>
                 </div>
 
-               
-		<div id="sub2" class="sub-page hidden">
-			<h3>Create Project Tasks</h3>
-			<div class="form-row">
-				<div class="form-group"><label>Select Project</label><select id="t-project-id"></select></div>
-				<div class="form-group" style="flex: 2;"><label>Task Name</label><input type="text" id="t-desc"></div>
-			</div>
-			<div class="form-group" style="margin-bottom: 15px;">
-				<label>Task Details / Instructions</label>
-				<textarea id="t-details" rows="2" placeholder="Add specific task instructions..."></textarea>
-			</div>
-			<button onclick="saveTask()">Save Task</button>
-			<table><thead><tr><th style="width:30px;"></th><th>Project Name</th><th>Tasks Count</th></tr></thead><tbody id="tasks-table-body"></tbody></table>
-		</div>
-
+                <div id="sub2" class="sub-page hidden">
+                    <h3>Create Project Tasks</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Select Project</label><select id="t-project-id"></select></div>
+                        <div class="form-group" style="flex: 2;"><label>Task Name</label><input type="text" id="t-desc"></div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Task Details / Instructions</label>
+                        <textarea id="t-details" rows="2" placeholder="Add specific task instructions..."></textarea>
+                    </div>
+                    <button onclick="saveTask()">Save Task</button>
+                    <table><thead><tr><th style="width:30px;"></th><th>Project Name</th><th>Tasks Count</th></tr></thead><tbody id="tasks-table-body"></tbody></table>
+                </div>
 
                 <div id="sub3" class="sub-page hidden">
                     <h3>Workspace Teams</h3>
@@ -473,7 +465,6 @@
             location.reload();
         };
 
-        // --- ADMIN MODULES ---
         window.navTo = (id) => {
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('#admin-view .sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -540,26 +531,21 @@
             const dd = document.getElementById('t-project-id'); dd.innerHTML = '<option value="">Select Project</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
-
-	window.saveTask = async () => {
-	    const pid = document.getElementById('t-project-id').value;
-	    const tdesc = document.getElementById('t-desc').value.trim();
-	    const tdetails = document.getElementById('t-details').value.trim(); // NEW FIELD
-	    if(!pid || !tdesc) return alert("Project selection and Task Name are required.");
-	    const taskSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
-	    if(taskSnap.size >= 10) return alert("Limit: 10 tasks/project.");
-    await addDoc(collection(db, "tasks"), {
-        projectId: pid, 
-        description: tdesc, 
-        taskDetails: tdetails, // SAVES TO DB
-        status: "To Do", 
-        adminEmail: auth.currentUser.email
-    });
-    document.getElementById('t-desc').value = ''; 
-    document.getElementById('t-details').value = ''; 
-    loadTasksTable();
-};
-
+        
+        // ADMIN PHASE 1 UPDATE: Captures Specific Task Details
+        window.saveTask = async () => {
+            const pid = document.getElementById('t-project-id').value;
+            const tdesc = document.getElementById('t-desc').value.trim();
+            const tdetails = document.getElementById('t-details').value.trim();
+            if(!pid || !tdesc) return alert("Project selection and Task Name are required.");
+            const taskSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
+            if(taskSnap.size >= 10) return alert("Limit: 10 tasks/project.");
+            await addDoc(collection(db, "tasks"), {
+                projectId: pid, description: tdesc, taskDetails: tdetails, status: "To Do", adminEmail: auth.currentUser.email
+            });
+            document.getElementById('t-desc').value = ''; document.getElementById('t-details').value = ''; 
+            loadTasksTable();
+        };
         window.loadTasksTable = async () => {
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
@@ -814,35 +800,35 @@
             });
         }
 
-        // --- MEMBER CORE MODULES ---
-       async function initMemberDashboard(email, data) {
-    document.getElementById('member-view').classList.remove('hidden');
-    document.getElementById('m-side-name').innerText = data.name || "";
-    document.getElementById('m-side-team').innerText = data.teamName || "General Team";
-    document.getElementById('m-side-company').innerText = data.company || "Org";
-    
-    document.getElementById('mp-name').value = data.name || ""; 
-    document.getElementById('mp-email').value = email || "";
-    document.getElementById('mp-phone').value = data.phone || "";
-    document.getElementById('mp-company').value = data.company || ""; 
-    document.getElementById('mp-team').value = data.teamName || "";
-    document.getElementById('mp-address').value = data.residentialAddress || "";
-    document.getElementById('mp-em-name').value = data.emergencyName || "";
-    document.getElementById('mp-em-num').value = data.emergencyPhone || "";
-    
-    onSnapshot(query(collection(db, "tasks"), where("assignedToEmail", "==", email)), async (snap) => {
-        let tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        tasks.sort((a, b) => (b.assignedTimestamp || 0) - (a.assignedTimestamp || 0));
+        // --- MEMBER CORE MODULES (PHASE 1 & 2 UPDATES) ---
+        async function initMemberDashboard(email, data) {
+            document.getElementById('member-view').classList.remove('hidden');
+            document.getElementById('m-side-name').innerText = data.name || "";
+            document.getElementById('m-side-team').innerText = data.teamName || "General Team";
+            document.getElementById('m-side-company').innerText = data.company || "Org";
+            
+            document.getElementById('mp-name').value = data.name || ""; 
+            document.getElementById('mp-email').value = email || "";
+            document.getElementById('mp-phone').value = data.phone || "";
+            document.getElementById('mp-company').value = data.company || ""; 
+            document.getElementById('mp-team').value = data.teamName || "";
+            document.getElementById('mp-address').value = data.residentialAddress || "";
+            document.getElementById('mp-em-name').value = data.emergencyName || "";
+            document.getElementById('mp-em-num').value = data.emergencyPhone || "";
+            
+            onSnapshot(query(collection(db, "tasks"), where("assignedToEmail", "==", email)), async (snap) => {
+                let tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                tasks.sort((a, b) => (b.assignedTimestamp || 0) - (a.assignedTimestamp || 0));
 
-        const projs = await getDocs(collection(db, "projects"));
-        const pMap = {}; 
-        // MODIFIED: Now grabs the whole project object instead of just the name
-        projs.forEach(p => pMap[p.id] = p.data()); 
-        
-        await checkOverdueAndNotify(tasks);
-        renderMemberTasks(tasks, pMap);
-    });
-}
+                const projs = await getDocs(collection(db, "projects"));
+                const pMap = {}; 
+                projs.forEach(p => pMap[p.id] = p.data()); 
+                
+                await checkOverdueAndNotify(tasks);
+                renderMemberTasks(tasks, pMap);
+            });
+            loadMemberNotifications(email);
+        }
 
         async function checkOverdueAndNotify(tasks) {
             const today = new Date().toISOString().split('T')[0];
@@ -856,119 +842,146 @@
         }
 
         function renderMemberTasks(tasks, pMap) {
-    const grid = document.getElementById('m-task-grid'); grid.innerHTML = '';
-    let s = { total: tasks.length, done: 0, wip: 0, todo: 0, hold: 0 };
-    
-    // 1. Group Tasks by Project
-    const tasksByProject = {};
+            const grid = document.getElementById('m-task-grid'); grid.innerHTML = '';
+            let s = { total: tasks.length, done: 0, wip: 0, todo: 0, hold: 0 };
+            
+            // 1. Group Tasks by Project
+            const tasksByProject = {};
+            tasks.forEach(t => {
+                const isDone = (t.status === 'Done' || t.status === 'completed');
+                if(isDone) s.done++;
+                else if(t.status==='WIP'||t.status==='in-progress') s.wip++;
+                else if(t.status==='To Do'||t.status==='to-do'||t.status==='assigned') s.todo++;
+                else if(t.status==='On Hold') s.hold++;
 
-    tasks.forEach(t => {
-        const isDone = (t.status === 'Done' || t.status === 'completed');
-        if(isDone) s.done++;
-        else if(t.status==='WIP'||t.status==='in-progress') s.wip++;
-        else if(t.status==='To Do'||t.status==='to-do'||t.status==='assigned') s.todo++;
-        else if(t.status==='On Hold') s.hold++;
+                if(!tasksByProject[t.projectId]) tasksByProject[t.projectId] = [];
+                tasksByProject[t.projectId].push(t);
+            });
 
-        if(!tasksByProject[t.projectId]) tasksByProject[t.projectId] = [];
-        tasksByProject[t.projectId].push(t);
-    });
+            // 2. Render Clubbed Tables
+            for (const [pid, pTasks] of Object.entries(tasksByProject)) {
+                const projectData = pMap[pid] || { name: 'Unknown Project', description: 'No project details available.' };
+                
+                let projectHTML = `
+                <div class="project-card" style="grid-column: 1 / -1;">
+                    <div class="project-header" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+                        <div style="font-size: 16px;">${projectData.name}</div>
+                        <div style="font-size: 12px; font-weight: normal; opacity: 0.9;">Project Details: ${projectData.description}</div>
+                    </div>
+                    <table class="card-table">`;
 
-    // 2. Render Clubbed Tables
-    for (const [pid, pTasks] of Object.entries(tasksByProject)) {
-        const projectData = pMap[pid] || { name: 'Unknown Project', description: 'No project details available.' };
-        
-        let projectHTML = `
-        <div class="project-card" style="grid-column: 1 / -1;">
-            <div class="project-header" style="flex-direction: column; align-items: flex-start; gap: 5px;">
-                <div style="font-size: 16px;">${projectData.name}</div>
-                <div style="font-size: 12px; font-weight: normal; opacity: 0.9;">Project Details: ${projectData.description}</div>
-            </div>
-            <table class="card-table">`;
+                pTasks.forEach(t => {
+                    const isDone = (t.status === 'Done' || t.status === 'completed');
+                    const overdueFlag = (t.targetDate && t.targetDate < new Date().toISOString().split('T')[0] && !isDone) ? `<span class="overdue-badge">OVERDUE</span>` : '';
+                    const disabledAttr = isDone ? 'disabled' : '';
+                    const minDate = t.assignedAt || ''; 
 
-        pTasks.forEach(t => {
-            const isDone = (t.status === 'Done' || t.status === 'completed');
-            const overdueFlag = (t.targetDate && t.targetDate < new Date().toISOString().split('T')[0] && !isDone) ? `<span class="overdue-badge">OVERDUE</span>` : '';
-            const disabledAttr = isDone ? 'disabled' : '';
-            const minDate = t.assignedAt || ''; 
+                    // History Array Mapping (Phase 2)
+                    let historyList = t.commentHistory || [];
+                    if (historyList.length === 0 && t.memberComment) {
+                        historyList = [{ date: "Legacy Note", text: t.memberComment }]; // Fallback for old tasks
+                    }
+                    
+                    let historyHTML = '';
+                    if (historyList.length > 0) {
+                        historyHTML = `<div style="background: var(--bg); padding: 10px; border-radius: 6px; margin-bottom: 10px; max-height: 120px; overflow-y: auto; border: 1px solid var(--border);">
+                            <strong style="font-size: 12px; color: #64748b;">UPDATE HISTORY</strong>
+                            ${historyList.map(c => `<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 13px;">
+                                <span style="color: var(--primary); font-size: 11px; font-weight: bold;">${c.date}</span><br>
+                                ${c.text}
+                            </div>`).join('')}
+                        </div>`;
+                    }
 
-            projectHTML += `
-                <tr style="background: rgba(37, 99, 235, 0.05);">
-                    <td colspan="2">
-                        <strong>Task:</strong> ${t.description} ${overdueFlag}<br>
-                        <div style="color: #64748b; font-size: 12px; margin-top: 4px;"><strong>Instructions:</strong> ${t.taskDetails || 'None'}</div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="width: 50%;"><strong>Target:</strong> ${t.targetDate || 'N/A'} | <strong>By:</strong> ${t.assignedByName || 'Admin'}</td>
-                    <td><strong>Status:</strong> 
-                        <select id="stat-${t.id}" ${disabledAttr}>
-                            <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
-                            <option value="To Do" ${t.status==='To Do'||t.status==='to-do'?'selected':''}>To Do</option>
-                            <option value="WIP" ${t.status==='WIP'||t.status==='in-progress'?'selected':''}>WIP</option>
-                            <option value="Done" ${t.status==='Done'||t.status==='completed'?'selected':''}>Done</option>
-                            <option value="On Hold" ${t.status==='On Hold'?'selected':''}>On Hold</option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td><textarea id="comm-${t.id}" maxlength="1000" placeholder="Add comment..." ${disabledAttr}>${t.memberComment || ''}</textarea></td>
-                    <td>Completion Date:<br><input type="date" id="cdate-${t.id}" value="${t.completionDate || ''}" min="${minDate}" ${disabledAttr}></td>
-                </tr>
-                <tr>
-                    <td colspan="2" style="border-bottom: 2px solid var(--border);">
-                        ${!isDone ? `<button onclick="submitTaskUpdate('${t.id}')" style="width: 100%;">Update Task</button>` : `<div style="text-align: center; color: #10b981; font-weight: bold; padding: 10px 0;">🔒 Task Completed</div>`}
-                    </td>
-                </tr>`;
-        });
+                    projectHTML += `
+                        <tr style="background: rgba(37, 99, 235, 0.05);">
+                            <td colspan="2">
+                                <strong>Task:</strong> ${t.description} ${overdueFlag}<br>
+                                <div style="color: #64748b; font-size: 12px; margin-top: 4px;"><strong>Instructions:</strong> ${t.taskDetails || 'None'}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Target:</strong> ${t.targetDate || 'N/A'} | <strong>By:</strong> ${t.assignedByName || 'Admin'}</td>
+                            <td><strong>Status:</strong> 
+                                <select id="stat-${t.id}" ${disabledAttr}>
+                                    <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
+                                    <option value="To Do" ${t.status==='To Do'||t.status==='to-do'?'selected':''}>To Do</option>
+                                    <option value="WIP" ${t.status==='WIP'||t.status==='in-progress'?'selected':''}>WIP</option>
+                                    <option value="Done" ${t.status==='Done'||t.status==='completed'?'selected':''}>Done</option>
+                                    <option value="On Hold" ${t.status==='On Hold'?'selected':''}>On Hold</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                ${historyHTML}
+                                <div style="display: flex; gap: 15px; align-items: flex-start;">
+                                    <div style="flex: 2;">
+                                        <textarea id="comm-${t.id}" rows="2" maxlength="1000" placeholder="Add a new update note..." ${disabledAttr} style="width: 100%;"></textarea>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 11px; font-weight: bold; color: #64748b;">COMPLETION DATE</label><br>
+                                        <input type="date" id="cdate-${t.id}" value="${t.completionDate || ''}" min="${minDate}" ${disabledAttr} style="margin-top: 5px; width: 100%;">
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border-bottom: 3px solid var(--primary);">
+                                ${!isDone ? `<button onclick="submitTaskUpdate('${t.id}')" style="width: 100%;">Update Task</button>` : `<div style="text-align: center; color: #10b981; font-weight: bold; padding: 10px 0;">🔒 Task Completed</div>`}
+                            </td>
+                        </tr>`;
+                });
 
-        projectHTML += `</table></div>`;
-        grid.innerHTML += projectHTML;
-    }
+                projectHTML += `</table></div>`;
+                grid.innerHTML += projectHTML;
+            }
 
-    document.getElementById('m-stat-total').innerText = s.total;
-    document.getElementById('m-stat-done').innerText = s.done;
-    document.getElementById('m-stat-wip').innerText = s.wip;
-    document.getElementById('m-stat-todo').innerText = s.todo;
-    document.getElementById('m-stat-hold').innerText = s.hold;
-}
+            document.getElementById('m-stat-total').innerText = s.total;
+            document.getElementById('m-stat-done').innerText = s.done;
+            document.getElementById('m-stat-wip').innerText = s.wip;
+            document.getElementById('m-stat-todo').innerText = s.todo;
+            document.getElementById('m-stat-hold').innerText = s.hold;
+        }
 
-        // USER UPDATE BUTTON LOGIC (Req 5 & 6 Fix)
+        // USER UPDATE LOGIC (Phase 2 Array Push)
         window.submitTaskUpdate = async (tid) => {
             try {
                 const stat = document.getElementById(`stat-${tid}`).value;
-                const comm = document.getElementById(`comm-${tid}`).value;
+                const comm = document.getElementById(`comm-${tid}`).value.trim();
                 const cdate = document.getElementById(`cdate-${tid}`).value;
                 
                 if (stat === 'Done' && !cdate) return alert("To mark this task as Done, you must provide a Completion Date.");
 
-                // 1. Get the current Member's profile to reliably find their Admin's email
                 const userSnap = await getDoc(doc(db, "users", auth.currentUser.email));
                 const memberData = userSnap.data();
                 const actualAdminEmail = memberData.adminEmail;
 
-                // 2. Get the Task details for the notification message
                 const tDoc = await getDoc(doc(db, "tasks", tid));
                 const t = tDoc.data();
 
-                // 3. Save the update to the Database
-                await updateDoc(doc(db, "tasks", tid), { 
-                    status: stat, 
-                    memberComment: comm, 
-                    completionDate: cdate 
-                });
-
-                // 4. Send the reliable Notification
+                let updatePayload = { status: stat, completionDate: cdate };
                 let msg = `${t.assignedToName} updated task "${t.description}" to status: ${stat}.`;
-                if (comm) msg += ` Message: "${comm}"`;
-                
-                await addDoc(collection(db, "notifications"), {
-                    forEmail: actualAdminEmail, // Reliably routes to the Admin
-                    fromEmail: auth.currentUser.email,
-                    message: msg,
-                    timestamp: Date.now(), 
-                    read: false, 
-                    bookmarked: false
-                });
+
+                if (comm) {
+                    const newComment = {
+                        date: new Date().toLocaleString(),
+                        text: comm
+                    };
+                    updatePayload.commentHistory = t.commentHistory ? [...t.commentHistory, newComment] : [newComment];
+                    msg += ` Message: "${comm}"`;
+                }
+
+                await updateDoc(doc(db, "tasks", tid), updatePayload);
+
+                try {
+                    await addDoc(collection(db, "notifications"), {
+                        forEmail: actualAdminEmail,
+                        fromEmail: auth.currentUser.email,
+                        message: msg,
+                        timestamp: Date.now(), read: false, bookmarked: false
+                    });
+                } catch(e) {}
 
                 alert("Task successfully updated!");
             } catch (error) {
@@ -976,9 +989,6 @@
                 alert("Error updating task: " + error.message);
             }
         };
-
-
-
 
         window.updateMemberProfile = async () => {
             await updateDoc(doc(db, "users", auth.currentUser.email), { 
