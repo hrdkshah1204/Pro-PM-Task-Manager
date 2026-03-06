@@ -385,6 +385,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+	import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         
@@ -400,6 +401,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+	const analytics = getAnalytics(app);
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({prompt: 'select_account'});
 
@@ -484,13 +486,22 @@
         });
 
         window.completeOnboarding = async () => {
-            await setDoc(doc(db, "users", auth.currentUser.email), { 
-                name: document.getElementById('ob-name').value, workspaceName: document.getElementById('ob-workspace-name').value,
-                company: document.getElementById('ob-company').value, teamSize: document.getElementById('ob-size').value,
-                onboardingComplete: true, role: 'admin' 
-            }, { merge: true });
-            location.reload();
-        };
+    await setDoc(doc(db, "users", auth.currentUser.email), { 
+        name: document.getElementById('ob-name').value, 
+        workspaceName: document.getElementById('ob-workspace-name').value,
+        company: document.getElementById('ob-company').value, 
+        teamSize: document.getElementById('ob-size').value,
+        onboardingComplete: true, role: 'admin' 
+    }, { merge: true });
+
+    // Move this ABOVE location.reload()
+    logEvent(analytics, 'org_created', { 
+        company_name: document.getElementById('ob-company').value,
+        team_size: document.getElementById('ob-size').value 
+    });
+
+    location.reload(); 
+};
 
         window.navTo = (id) => {
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
@@ -527,6 +538,7 @@
             if(editId) await updateDoc(doc(db, "projects", editId), data);
             else { data.createdAt = new Date().toISOString(); await addDoc(collection(db, "projects"), data); }
             cancelEdit(); loadProjectsTable();
+logEvent(analytics, 'project_created');
         };
 
         window.loadProjectsTable = async () => {
@@ -558,7 +570,7 @@
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         
-        window.window.saveTask = async () => {
+	window.saveTask = async () => {
             const pid = document.getElementById('t-project-id').value;
             const tdesc = document.getElementById('t-desc').value.trim();
             const tdetails = document.getElementById('t-details').value.trim();
@@ -570,6 +582,7 @@
             });
             document.getElementById('t-desc').value = ''; document.getElementById('t-details').value = ''; 
             loadTasksTable();
+	logEvent(analytics, 'task_created');
         };
 
         // --- THE MISSING LINE WAS ADDED BELOW ---
@@ -640,6 +653,7 @@
                 await addDoc(collection(db, "teams"), {name: document.getElementById('team-name').value, createdBy: auth.currentUser.email});
             } else { await updateDoc(doc(db, "teams", editId), {name: document.getElementById('team-name').value}); }
             document.getElementById('team-name').value = ''; loadTeamsTable();
+logEvent(analytics, 'team_created');
         };
        
 window.loadTeamsTable = async () => {
@@ -1144,49 +1158,58 @@ window.loadTeamsTable = async () => {
         }
 
         window.submitTaskUpdate = async (tid) => {
-            try {
-                const stat = document.getElementById(`stat-${tid}`).value;
-                const comm = document.getElementById(`comm-${tid}`).value.trim();
-                const cdate = document.getElementById(`cdate-${tid}`).value;
-                
-                if (stat === 'Done' && !cdate) return alert("To mark this task as Done, you must provide a Completion Date.");
+    try {
+        const stat = document.getElementById(`stat-${tid}`).value;
+        const comm = document.getElementById(`comm-${tid}`).value.trim();
+        const cdate = document.getElementById(`cdate-${tid}`).value;
+        
+        // 1. Validation Check First
+        if (stat === 'Done' && !cdate) return alert("To mark this task as Done, you must provide a Completion Date.");
 
-                const userSnap = await getDoc(doc(db, "users", auth.currentUser.email));
-                const memberData = userSnap.data();
-                const actualAdminEmail = memberData.adminEmail;
+        const userSnap = await getDoc(doc(db, "users", auth.currentUser.email));
+        const memberData = userSnap.data();
+        const actualAdminEmail = memberData.adminEmail;
 
-                const tDoc = await getDoc(doc(db, "tasks", tid));
-                const t = tDoc.data();
+        const tDoc = await getDoc(doc(db, "tasks", tid));
+        const t = tDoc.data();
 
-                let updatePayload = { status: stat, completionDate: cdate };
-                let msg = `${t.assignedToName} updated task "${t.description}" to status: ${stat}.`;
+        // 2. Prepare the Update Payload
+        let updatePayload = { status: stat, completionDate: cdate };
+        let msg = `${t.assignedToName} updated task "${t.description}" to status: ${stat}.`;
 
-                if (comm) {
-                    const newComment = {
-                        date: new Date().toLocaleString(),
-                        text: comm
-                    };
-                    updatePayload.commentHistory = t.commentHistory ? [...t.commentHistory, newComment] : [newComment];
-                    msg += ` Message: "${comm}"`;
-                }
+        if (comm) {
+            const newComment = {
+                date: new Date().toLocaleString(),
+                text: comm
+            };
+            updatePayload.commentHistory = t.commentHistory ? [...t.commentHistory, newComment] : [newComment];
+            msg += ` Message: "${comm}"`;
+        }
 
-                await updateDoc(doc(db, "tasks", tid), updatePayload);
+        // 3. Update the Database
+        await updateDoc(doc(db, "tasks", tid), updatePayload);
 
-                try {
-                    await addDoc(collection(db, "notifications"), {
-                        forEmail: actualAdminEmail,
-                        fromEmail: auth.currentUser.email,
-                        message: msg,
-                        timestamp: Date.now(), read: false, bookmarked: false
-                    });
-                } catch(e) {}
+        // 4. LOG TO ANALYTICS (Only runs if database update succeeded)
+        logEvent(analytics, 'task_status_updated', { status: stat });
 
-                alert("Task successfully updated!");
-            } catch (error) {
-                console.error("Update failed:", error);
-                alert("Error updating task: " + error.message);
-            }
-        };
+        // 5. Send Notification
+        try {
+            await addDoc(collection(db, "notifications"), {
+                forEmail: actualAdminEmail,
+                fromEmail: auth.currentUser.email,
+                message: msg,
+                timestamp: Date.now(), 
+                read: false, 
+                bookmarked: false
+            });
+        } catch(e) { console.error("Notification failed", e); }
+
+        alert("Task successfully updated!");
+    } catch (error) {
+        console.error("Update failed:", error);
+        alert("Error updating task: " + error.message);
+    }
+};
 
         window.updateMemberProfile = async () => {
             await updateDoc(doc(db, "users", auth.currentUser.email), { 
