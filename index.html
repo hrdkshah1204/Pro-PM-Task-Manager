@@ -52,22 +52,24 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: rgba(0,0,0,0.03); font-weight: 600; color: var(--text); font-size: 14px; }
+        .action-btns { display: flex; gap: 8px; }
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
 
-        /* Member Grid System (Split side-by-side) */
+        /* Member Grid System */
         .task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px; }
-        .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; height: fit-content; }
         .project-header { background: var(--primary); color: white; padding: 12px; font-weight: bold; }
         .card-table { width: 100%; border-collapse: collapse; }
         .card-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .card-table tr:last-child td { border-bottom: none; }
 
         .expand-btn { background: transparent; border: none; color: var(--primary); font-size: 16px; cursor: pointer; padding: 0; width: 24px; text-align: center; }
         .task-details-row { background: var(--bg); display: none; }
         .task-details-row.open { display: table-row; }
         .task-list { margin: 0; padding: 10px; list-style: none; background: var(--bg); }
-        .task-list li { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .task-list li { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;}
 
         .stats-summary { width: 100%; margin-top: 20px; text-align: center; }
         .stats-summary td { font-size: 18px; font-weight: 800; color: var(--primary); }
@@ -88,7 +90,10 @@
                 <button class="outline" onclick="forgotPassword()" style="flex: 1; margin-left: 5px; padding: 8px; font-size: 12px;">Forgot Password?</button>
             </div>
         </div>
-        <button class="outline" onclick="signIn()" style="width: 100%; margin-top: 20px;">Continue with Google</button>
+        <div style="margin: 20px 0; color: #cbd5e1; display: flex; align-items: center; gap: 10px;">
+            <hr style="flex:1; border:0; border-top:1px solid #e2e8f0;"> or <hr style="flex:1; border:0; border-top:1px solid #e2e8f0;">
+        </div>
+        <button class="outline" onclick="signIn()" style="width: 100%;">Continue with Google</button>
         <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444; font-weight: 600;"></p>
     </div>
 
@@ -106,7 +111,7 @@
                 <option value="151 - 500">151 - 500</option>
             </select>
         </div>
-        <button onclick="completeOnboarding()" style="width: 100%;">Complete Setup & Enter Console</button>
+        <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
     </div>
 
     <div id="admin-view" class="hidden">
@@ -168,7 +173,7 @@
                             <button id="btn-cancel-team-edit" class="outline hidden" onclick="cancelTeamEdit()">Cancel</button>
                         </div>
                     </div>
-                    <table><thead><tr><th>Team Name</th><th style="width: 150px;">Actions</th></tr></thead><tbody id="team-table-body"></tbody></table>
+                    <table><thead><tr><th>Team Name</th><th style="width: 250px;">Actions</th></tr></thead><tbody id="team-table-body"></tbody></table>
                 </div>
 
                 <div id="sub4" class="sub-page hidden">
@@ -186,7 +191,7 @@
                             <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
                         </div>
                     </div>
-                    <table><thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Actions</th></tr></thead><tbody id="member-table-body"></tbody></table>
+                    <table><thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead><tbody id="member-table-body"></tbody></table>
                 </div>
 
                 <div id="sub5" class="sub-page hidden">
@@ -234,7 +239,7 @@
                             <div class="form-group"><label>Role</label><input id="set-role" disabled value="ADMIN"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group"><label>Company Name</label><input id="set-company" disabled></div>
+                            <div class="form-group"><label>Company</label><input id="set-company" disabled></div>
                             <div class="form-group">
                                 <label>Team Size</label>
                                 <select id="set-size">
@@ -283,7 +288,6 @@
             <button class="sidebar-btn" onclick="navToMember('m-sub3')">🔔 Notifications</button>
             <div style="flex: 1;"></div>
         </div>
-
         <div class="view-container">
             <div class="top-quick-access">
                 <button class="quick-btn" onclick="navToMember('m-sub1')">🏠 Home</button>
@@ -418,7 +422,6 @@
                         document.getElementById('display-org-name').innerText = data.company || "Workspace";
                         document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name);
                         
-                        // Populate Admin Settings fields
                         document.getElementById('set-name').value = data.name || "";
                         document.getElementById('set-email').value = user.email;
                         document.getElementById('set-phone').value = data.phone || "";
@@ -472,19 +475,25 @@
             if(id === 'sub8') loadAdminNotifications();
         };
 
+        // FIXED: Duplicate name check blocks if same name exists for admin, regardless of date.
         window.saveProject = async () => {
             const user = auth.currentUser;
             const name = document.getElementById('p-name').value.trim();
             const date = document.getElementById('p-date').value;
             const desc = document.getElementById('p-desc').value.trim();
             const editId = document.getElementById('edit-project-id').value;
+
             if(!name || !date || !desc) return alert("All fields are required!");
+
             if(!editId) {
                 const countSnap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
                 if(countSnap.size >= 20) return alert("Limit Reached: Max 20 projects allowed.");
-                const dupCheck = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name), where("endDate", "==", date)));
-                if(!dupCheck.empty) return alert("A project with this name and date already exists.");
+                
+                // ONLY checks name so you can't have duplicate project names
+                const dupCheck = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name)));
+                if(!dupCheck.empty) return alert("A project with this exact name already exists.");
             }
+
             const data = { name, endDate: date, description: desc, createdBy: user.email, status: 'active' };
             if(editId) await updateDoc(doc(db, "projects", editId), data);
             else { data.createdAt = new Date().toISOString(); await addDoc(collection(db, "projects"), data); }
@@ -542,6 +551,7 @@
         window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
+        // FIXED: Added Edit logic and +Members quick link button
         window.saveTeam = async () => {
             const editId = document.getElementById('edit-team-id').value;
             if(!editId) {
@@ -554,9 +564,21 @@
         window.loadTeamsTable = async () => {
             const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
             const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button onclick="deleteTeam('${d.id}')">Del</button></td></tr>`);
+            snap.forEach(d => {
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td class="action-btns">
+                    <button class="outline" onclick="navTo('sub4')">+ Members</button>
+                    <button onclick="editTeam('${d.id}')">Edit</button>
+                    <button class="danger" onclick="deleteTeam('${d.id}')">Del</button>
+                </td></tr>`;
+            });
         };
-        window.deleteTeam = async (id) => { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); };
+        window.editTeam = async (id) => { 
+            const d = await getDoc(doc(db, "teams", id)); 
+            document.getElementById('team-name').value = d.data().name; document.getElementById('edit-team-id').value = id; 
+            document.getElementById('btn-cancel-team-edit').classList.remove('hidden');
+        };
+        window.cancelTeamEdit = () => { document.getElementById('team-name').value = ''; document.getElementById('edit-team-id').value = ''; document.getElementById('btn-cancel-team-edit').classList.add('hidden'); };
+        window.deleteTeam = async (id) => { if(confirm("Delete team?")) { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } };
 
         window.loadTeamDropdownForMembers = async () => {
             const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
@@ -581,22 +603,48 @@
             };
             await setDoc(doc(db, "users", email), memberData, {merge: true});
             
-            // Automation Hook: Verification + Automation collection
-            await addDoc(collection(db, "mail"), {
-                to: email,
-                message: {
-                    subject: `Onboarding: Welcome to ${memberData.company}`,
-                    html: `<p>You have been onboarded by ${document.querySelector('.user-name').innerText}. Login at https://pm-pro-80c67.firebaseapp.com</p>`
-                }
-            });
-            await sendPasswordResetEmail(auth, email);
+            // Notification trigger
+            if(!document.getElementById('edit-member-id').value) {
+                await addDoc(collection(db, "mail"), {
+                    to: email,
+                    message: {
+                        subject: `Onboarding: Welcome to ${memberData.company}`,
+                        html: `<p>You have been onboarded by ${document.querySelector('.user-name').innerText}. Login at https://pm-pro-80c67.firebaseapp.com</p>`
+                    }
+                });
+                await sendPasswordResetEmail(auth, email);
+            }
+            cancelMemberEdit();
             loadMembersTable();
+        };
+
+        // FIXED: Added Edit logic and Edit Button to Members View
+        window.editMember = async (email) => {
+            const d = await getDoc(doc(db, "users", email));
+            const m = d.data();
+            document.getElementById('m-name').value = m.name;
+            document.getElementById('m-email').value = m.email;
+            document.getElementById('m-email').disabled = true;
+            document.getElementById('m-phone').value = m.phone;
+            document.getElementById('m-team-id').value = m.teamId;
+            document.getElementById('edit-member-id').value = email;
+            document.getElementById('btn-cancel-member').classList.remove('hidden');
+        };
+        window.cancelMemberEdit = () => {
+            document.getElementById('m-name').value = ''; document.getElementById('m-email').value = '';
+            document.getElementById('m-email').disabled = false; document.getElementById('m-phone').value = '';
+            document.getElementById('m-team-id').value = ''; document.getElementById('edit-member-id').value = '';
+            document.getElementById('btn-cancel-member').classList.add('hidden');
         };
         window.loadMembersTable = async () => {
             const snap = await getDocs(query(collection(db, "users"), where("adminEmail", "==", auth.currentUser.email)));
             const tbody = document.getElementById('member-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td><button onclick="deleteMember('${d.id}')">X</button></td></tr>`);
+            snap.forEach(d => {
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td>
+                <td class="action-btns"><button onclick="editMember('${d.id}')">Edit</button><button class="danger" onclick="deleteMember('${d.id}')">Del</button></td></tr>`;
+            });
         };
+        window.deleteMember = async (id) => { await deleteDoc(doc(db, "users", id)); loadMembersTable(); };
 
         window.workspaceTeams = []; window.workspaceMembers = [];
         window.loadAssignProjectDropdown = async () => {
@@ -609,6 +657,8 @@
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         };
+
+        // FIXED: Status dropdown logic restored
         window.loadAssignmentTable = async () => {
             const pid = document.getElementById('assign-project-select').value;
             if(!pid) return;
@@ -618,7 +668,13 @@
             tSnap.forEach(d => {
                 const t = d.data();
                 tb.innerHTML += `<tr><td>${t.description}</td><td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">Team</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td><td><select id="m-${d.id}"></select></td><td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td></tr>`;
-                sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${t.assignedToName || 'Unassigned'}</td><td><select onchange="manualStatusUpdate('${d.id}', this.value)"><option value="to-do">To-Do</option><option value="completed">Completed</option></select></td></tr>`;
+                sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${t.assignedToName || 'Unassigned'}</td><td>
+                    <select onchange="manualStatusUpdate('${d.id}', this.value)" style="padding:4px; font-size:12px;">
+                        <option value="to-do" ${t.status==='to-do'?'selected':''}>To-Do</option>
+                        <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
+                        <option value="in-progress" ${t.status==='in-progress'?'selected':''}>In-Progress</option>
+                        <option value="completed" ${t.status==='completed'?'selected':''}>Completed</option>
+                    </select></td></tr>`;
             });
         };
         window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
@@ -631,10 +687,21 @@
             await addDoc(collection(db, "notifications"), { forEmail: email, fromEmail: auth.currentUser.email, message: `New task assigned by ${adminName}.`, timestamp: Date.now(), read: false, bookmarked: false });
             loadAssignmentTable();
         };
+        window.manualStatusUpdate = async (tid, s) => await updateDoc(doc(db, "tasks", tid), { status: s });
 
+        // FIXED: The missing mSnap array promise added to prevent crash!
         window.runAnalytics = async () => {
             const user = auth.currentUser;
-            const [pSnap, tSnap, teamSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email))), getDocs(collection(db, "tasks")), getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)))]);
+            const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
+                getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email))), 
+                getDocs(collection(db, "tasks")), 
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email))),
+                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email))) // <-- FIXED PROMISE
+            ]);
+            
+            document.getElementById('stat-projects').innerText = pSnap.size;
+            document.getElementById('stat-teams').innerText = teamSnap.size;
+            document.getElementById('stat-members').innerText = mSnap.size;
             const container = document.getElementById('project-progress-container'); container.innerHTML = '';
             pSnap.forEach(d => {
                 const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
@@ -644,6 +711,11 @@
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${d.data().name}</strong><span>${perc}% Complete</span></div>
                     <div style="width:100%; background:var(--bg); height:10px; border-radius:5px; overflow:hidden;"><div style="width:${perc}%; background:var(--primary); height:10px;"></div></div>
                 </div>`;
+            });
+            const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
+            teamSnap.forEach(teamDoc => {
+                const teamTasks = tSnap.docs.filter(t => t.data().assignedTeamId === teamDoc.id);
+                tBody.innerHTML += `<tr><td>${teamDoc.data().name}</td><td><strong>${teamTasks.length}</strong></td><td style="color:#64748b">${teamTasks.filter(t => t.data().status==='to-do'||t.data().status==='assigned').length}</td><td style="color:#2563eb">${teamTasks.filter(t => t.data().status==='in-progress'||t.data().status==='WIP').length}</td><td style="color:#10b981">${teamTasks.filter(t => t.data().status==='completed'||t.data().status==='Done').length}</td></tr>`;
             });
         };
 
@@ -682,19 +754,39 @@
             let s = { total: tasks.length, done: 0, wip: 0, todo: 0, hold: 0 };
             tasks.forEach(t => {
                 if(t.status==='Done'||t.status==='completed') s.done++;
-                grid.innerHTML += `<div class="project-card"><div class="project-header">${pMap[t.projectId]}</div>
-                <table class="card-table">
-                    <tr><td><strong>Task:</strong> ${t.description}</td></tr>
-                    <tr><td><strong>Assigned By:</strong> ${t.assignedByName}</td></tr>
-                    <tr><td><select onchange="updateTaskStatus('${t.id}', this.value)">
-                        <option value="To Do" ${t.status==='To Do'?'selected':''}>To Do</option>
-                        <option value="Done" ${t.status==='Done'?'selected':''}>Done</option>
-                    </select></td></tr>
-                    <tr><td><textarea maxlength="1000" onblur="updateTaskComment('${t.id}', this.value)" placeholder="Add comment...">${t.memberComment || ''}</textarea></td></tr>
-                </table></div>`;
+                else if(t.status==='WIP'||t.status==='in-progress') s.wip++;
+                else if(t.status==='To Do'||t.status==='to-do') s.todo++;
+                else if(t.status==='On Hold') s.hold++;
+
+                grid.innerHTML += `
+                <div class="project-card">
+                    <div class="project-header">${pMap[t.projectId] || 'Project'}</div>
+                    <table class="card-table">
+                        <tr><td><strong>Task:</strong> ${t.description}</td></tr>
+                        <tr><td><strong>Target:</strong> ${t.endDate || 'N/A'} | <strong>By:</strong> ${t.assignedByName || 'Admin'}</td></tr>
+                        <tr><td><strong>Status:</strong> 
+                            <select onchange="updateTaskStatus('${t.id}', this.value)">
+                                <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
+                                <option value="To Do" ${t.status==='To Do'?'selected':''}>To Do</option>
+                                <option value="WIP" ${t.status==='WIP'?'selected':''}>WIP</option>
+                                <option value="Done" ${t.status==='Done'?'selected':''}>Done</option>
+                                <option value="On Hold" ${t.status==='On Hold'?'selected':''}>On Hold</option>
+                            </select></td></tr>
+                        <tr><td><textarea maxlength="1000" placeholder="Add comment..." onblur="updateTaskComment('${t.id}', this.value)">${t.memberComment || ''}</textarea></td></tr>
+                        <tr><td>Completion Date: <input type="date" value="${t.completionDate || ''}" onchange="updateTaskCompletion('${t.id}', this.value)"></td></tr>
+                    </table>
+                </div>`;
             });
             document.getElementById('m-stat-total').innerText = s.total;
+            document.getElementById('m-stat-done').innerText = s.done;
+            document.getElementById('m-stat-wip').innerText = s.wip;
+            document.getElementById('m-stat-todo').innerText = s.todo;
+            document.getElementById('m-stat-hold').innerText = s.hold;
         }
+
+        window.updateTaskStatus = (id, s) => updateDoc(doc(db, "tasks", id), { status: s });
+        window.updateTaskComment = (id, c) => updateDoc(doc(db, "tasks", id), { memberComment: c });
+        window.updateTaskCompletion = (id, d) => updateDoc(doc(db, "tasks", id), { completionDate: d });
 
         window.updateMemberProfile = async () => {
             await updateDoc(doc(db, "users", auth.currentUser.email), { 
