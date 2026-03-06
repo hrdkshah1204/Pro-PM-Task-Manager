@@ -88,12 +88,17 @@
                 <button class="outline" onclick="forgotPassword()" style="flex: 1; margin-left: 5px; padding: 8px; font-size: 12px;">Forgot Password?</button>
             </div>
         </div>
-        <div style="margin: 20px 0; color: #cbd5e1; display: flex; align-items: center; gap: 10px;">
+        
+	<div style="margin: 20px 0; color: #cbd5e1; display: flex; align-items: center; gap: 10px;">
             <hr style="flex:1; border:0; border-top:1px solid #e2e8f0;"> or <hr style="flex:1; border:0; border-top:1px solid #e2e8f0;">
         </div>
         <button class="outline" onclick="signIn()" style="width: 100%;">Continue with Google</button>
         <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444; font-weight: 600;"></p>
     </div>
+
+//--------------------------------------------
+//-----------Onboarding Class-----------------
+//--------------------------------------------
 
     <div id="onboarding-view" class="hidden" style="max-width: 500px; margin: 5vh auto; background: var(--surface); padding: 40px; border-radius: 12px; border: 1px solid var(--border);">
         <h2>Setup Your Workspace</h2>
@@ -112,6 +117,9 @@
         <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
     </div>
 
+//--------------------------------------------
+//------------Admin View----------------------
+//--------------------------------------------
     <div id="admin-view" class="hidden">
         <div class="sidebar">
             <div class="brand-logo">ProPM</div>
@@ -130,6 +138,9 @@
             </div>
         </div>
 
+//--------------------------------------------
+//--------------View Container----------------
+//--------------------------------------------
         <div class="view-container">
             <div class="top-quick-access">
                 <button class="quick-btn" onclick="navTo('sub8')" style="position: relative;">
@@ -174,18 +185,16 @@
                     <button onclick="saveTask()">Save Task</button>
                     
                     <h3 style="margin-top: 30px;">Project Task Lists</h3>
-                    <table>
-                        <thead>
-                            <tr>
+                    <table><thead><tr>
                                 <th style="width: 50px; text-align: center;">View</th>
                                 <th>Project Name</th>
                                 <th>Tasks Count</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tasks-table-body"></tbody>
-                    </table>
+                            </tr></thead><tbody id="tasks-table-body"></tbody></table>
                 </div>
 
+//--------------------------------------------
+//-----------------Sub Page Hidden------------
+//--------------------------------------------
                 <div id="sub3" class="sub-page hidden">
                     <h3>Workspace Teams</h3>
                     <div class="form-row">
@@ -196,20 +205,18 @@
                             <button id="btn-cancel-team-edit" class="outline hidden" onclick="cancelTeamEdit()">Cancel</button>
                         </div>
                     </div>
-                    <table style="margin-top: 20px;">
-                        <thead>
-                            <tr>
-                                <th>Team Name</th>
+                    <table style="margin-top: 20px;"><thead><tr>
+				<th>Team Name</th>
                                 <th style="text-align: center; width: 100px;">Capacity</th>
                                 <th style="text-align: center; width: 120px;">Add Members</th>
                                 <th style="text-align: center; width: 80px;">Edit</th>
                                 <th style="text-align: center; width: 80px;">Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody id="team-table-body"></tbody>
-                    </table>
+                            </tr></thead><tbody id="team-table-body"></tbody></table>
                 </div>
 
+		//----------------------------------------------
+		//------------Sub Class 4 CSS -------------------
+		//----------------------------------------------
                 <div id="sub4" class="sub-page hidden">
                     <h3>Add Team Members</h3>
                     <div class="form-row">
@@ -228,6 +235,9 @@
                     <table><thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead><tbody id="member-table-body"></tbody></table>
                 </div>
 
+		//----------------------------------------------
+		//--------------sub page 5 CSS------------------
+		//----------------------------------------------
                 <div id="sub5" class="sub-page hidden">
                     <h3>Assign Project Tasks</h3>
                     <select id="assign-project-select" onchange="loadAssignmentTable()" style="max-width: 400px; margin-bottom: 20px;"></select>
@@ -238,7 +248,9 @@
                     <h3 style="margin-top: 40px;">Current Allocation Summary</h3>
                     <table><thead><tr><th>Task</th><th>Team</th><th>Assigned To</th><th>Status Overwrite</th></tr></thead><tbody id="allocation-summary-body"></tbody></table>
                 </div>
-
+		//----------------------------------------------
+		//------------Sub page 6 CSS -------------------
+		//----------------------------------------------
                 <div id="sub6" class="sub-page hidden">
                     <h3>Workspace Analytics</h3>
                     <div style="display: flex; gap: 20px; margin-bottom: 30px;">
@@ -257,6 +269,10 @@
                     <h3 style="margin-top: 30px;">Team Workload Breakdown</h3>
                     <table><thead><tr><th>Team Name</th><th>Total Tasks</th><th style="color: #64748b;">To-Do</th><th style="color: #2563eb;">WIP</th><th style="color: #10b981;">Completed</th></tr></thead><tbody id="analytics-team-body"></tbody></table>
                 </div>
+
+		//----------------------------------------------
+		//-------------SUb Page 7 CSS-------------------
+		//----------------------------------------------
 
                 <div id="sub7" class="sub-page hidden">
                     <div class="settings-header">
@@ -386,7 +402,6 @@
                     <p style="color: #64748b; font-size: 14px; margin-top: 5px;">Your completed tasks are safely archived here.</p>
                     <div class="task-grid" id="m-history-grid" style="margin-top: 20px;"></div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -470,7 +485,6 @@
                         document.getElementById('admin-view').classList.remove('hidden');
                         document.getElementById('display-org-name').innerText = data.company || "Workspace";
                         document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name);
-                        
                         document.getElementById('set-name').value = data.name || "";
                         document.getElementById('set-email').value = user.email;
                         document.getElementById('set-phone').value = data.phone || "";
@@ -507,7 +521,6 @@
             document.getElementById(id).classList.remove('hidden');
             const sideBtn = Array.from(document.querySelectorAll('.sidebar-btn')).find(b => b.getAttribute('onclick')?.includes(id));
             if(sideBtn) sideBtn.classList.add('active');
-            
             if(id === 'sub1') loadProjectsTable();
             if(id === 'sub2') { loadProjectDropdown(); loadTasksTable(); }
             if(id === 'sub3') loadTeamsTable();
@@ -611,7 +624,7 @@
                 <tr id="details-${d.id}" style="display: none; background: var(--bg);">
                     <td colspan="3" style="padding: 0; border-bottom: 2px solid var(--primary);">
                         <table style="width: 100%; margin: 0; box-shadow: none; border-radius: 0;">
-                            <thead style="background: rgba(0,0,0,0.02);">
+                            <thead style="background: rgba(0,0,0,0.02);"> 
                                 <tr>
                                     <th style="padding-left: 20px; font-size: 12px; color: #64748b;">Task Name</th>
                                     <th style="font-size: 12px; color: #64748b;">Task Details</th>
