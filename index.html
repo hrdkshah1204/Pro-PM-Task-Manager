@@ -149,8 +149,12 @@
                     <input type="hidden" id="edit-project-id">
                     <button id="btn-save-project" onclick="saveProject()">Save Project</button>
                     <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left:10px">Cancel</button>
-                    <h3>Active Projects</h3>
-                    <table><thead><tr><th>Project Name</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="project-table-body"></tbody></table>
+                    
+                    <h3 style="margin-top: 30px;">Active Projects</h3>
+                    <table>
+                        <thead><tr><th>Project Name</th><th>End Date</th><th>Description</th><th>Actions</th></tr></thead>
+                        <tbody id="project-table-body"></tbody>
+                    </table>
                 </div>
 
                 <div id="sub2" class="sub-page hidden">
@@ -181,7 +185,7 @@
                     <div class="form-row">
                         <div class="form-group"><label>Name</label><input type="text" id="m-name"></div>
                         <div class="form-group"><label>Email</label><input type="email" id="m-email"></div>
-                        <div class="form-group"><label>Phone</label><input type="text" id="m-phone"></div>
+                        <div class="form-group"><label>Phone Number</label><input type="text" id="m-phone"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Select Team</label><select id="m-team-id"></select></div>
@@ -498,21 +502,25 @@
             cancelEdit(); loadProjectsTable();
         };
 
+        // UPDATED: Now uses description text instead of a dropdown for project status in the table
         window.loadProjectsTable = async () => {
             const q = query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
             const tbody = document.getElementById('project-table-body'); tbody.innerHTML = '';
             snap.forEach(d => {
                 const p = d.data();
-                tbody.innerHTML += `<tr><td>${p.name}</td><td>${p.endDate}</td>
-                <td><select onchange="updateProjectStatus('${d.id}', this.value)">
-                    <option value="active" ${p.status==='active'?'selected':''}>Active</option>
-                    <option value="completed" ${p.status==='completed'?'selected':''}>Completed</option>
-                </select></td>
-                <td class="action-btns"><button onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Del</button></td></tr>`;
+                tbody.innerHTML += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.endDate}</td>
+                    <td>${p.description || 'No description provided.'}</td>
+                    <td class="action-btns">
+                        <button onclick="editProject('${d.id}')">Edit</button>
+                        <button class="danger" onclick="deleteProject('${d.id}')">Del</button>
+                    </td>
+                </tr>`;
             });
         };
-        window.updateProjectStatus = async (id, s) => await updateDoc(doc(db, "projects", id), { status: s });
+        
         window.editProject = async (id) => {
             const d = await getDoc(doc(db, "projects", id));
             const p = d.data();
@@ -588,6 +596,7 @@
             const email = document.getElementById('m-email').value.toLowerCase().trim();
             const tid = document.getElementById('m-team-id').value;
             const name = document.getElementById('m-name').value.trim();
+            const phone = document.getElementById('m-phone').value.trim();
             const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
             const editId = document.getElementById('edit-member-id').value;
 
@@ -598,17 +607,15 @@
                     const memSnap = await getDocs(query(collection(db, "users"), where("teamId", "==", tid)));
                     if(memSnap.size >= 10) return alert("Limit: 10 Members per team.");
 
-                    // Auto-generate random password
                     const randomPassword = Math.random().toString(36).slice(-8);
 
-                    // Create user silently via secondary app
                     const newCred = await createUserWithEmailAndPassword(secondaryAuth, email, randomPassword);
                     await sendEmailVerification(newCred.user);
                     await signOut(secondaryAuth);
 
                     await setDoc(doc(db, "users", email), {
                         name: name, 
-                        phone: document.getElementById('m-phone').value, 
+                        phone: phone, 
                         teamId: tid, 
                         teamName: tname, 
                         role: 'member', 
@@ -620,7 +627,7 @@
                 } else {
                     await updateDoc(doc(db, "users", email), {
                         name: name,
-                        phone: document.getElementById('m-phone').value,
+                        phone: phone,
                         teamId: tid,
                         teamName: tname
                     });
@@ -636,9 +643,12 @@
         window.editMember = async (email) => {
             const d = await getDoc(doc(db, "users", email));
             const m = d.data();
-            document.getElementById('m-name').value = m.name; document.getElementById('m-email').value = email;
-            document.getElementById('m-email').disabled = true; document.getElementById('m-phone').value = m.phone;
-            document.getElementById('m-team-id').value = m.teamId; document.getElementById('edit-member-id').value = email;
+            document.getElementById('m-name').value = m.name || "";
+            document.getElementById('m-email').value = email;
+            document.getElementById('m-email').disabled = true;
+            document.getElementById('m-phone').value = m.phone || "";
+            document.getElementById('m-team-id').value = m.teamId;
+            document.getElementById('edit-member-id').value = email;
             document.getElementById('btn-cancel-member').classList.remove('hidden');
         };
         window.cancelMemberEdit = () => {
@@ -651,29 +661,20 @@
             const snap = await getDocs(query(collection(db, "users"), where("adminEmail", "==", auth.currentUser.email)));
             const tbody = document.getElementById('member-table-body'); tbody.innerHTML = '';
             snap.forEach(d => {
-                tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td>
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone || "N/A"}</td>
                 <td class="action-btns"><button onclick="editMember('${d.id}')">Edit</button><button class="danger" onclick="deleteMember('${d.id}')">Del</button></td></tr>`;
             });
         };
 
-        // FIXED: Deleting a member now cleans up "Ghost" assignments
         window.deleteMember = async (id) => { 
             if(confirm("Delete this member? This will automatically unassign any tasks they were working on.")) {
-                // 1. Delete user from system
                 await deleteDoc(doc(db, "users", id)); 
-                
-                // 2. Search for Ghost tasks and reset them
                 const assignedTasks = await getDocs(query(collection(db, "tasks"), where("assignedToEmail", "==", id)));
                 assignedTasks.forEach(async (t) => {
                     await updateDoc(doc(db, "tasks", t.id), {
-                        assignedToEmail: "",
-                        assignedToName: "",
-                        assignedTeamId: "",
-                        assignedTeamName: "",
-                        status: "to-do" // Sends it back to "To-Do" status
+                        assignedToEmail: "", assignedToName: "", assignedTeamId: "", assignedTeamName: "", status: "to-do" 
                     });
                 });
-
                 loadMembersTable(); 
             }
         };
@@ -698,8 +699,14 @@
             const sb = document.getElementById('allocation-summary-body'); sb.innerHTML = '';
             tSnap.forEach(d => {
                 const t = d.data();
+                
+                let assigneeDisplay = t.assignedToName || 'Unassigned';
+                if (t.assignedToEmail && !window.workspaceMembers.some(m => m.email === t.assignedToEmail)) {
+                    assigneeDisplay = `<span style="color: #ef4444; font-weight: bold;">${t.assignedToName} (Deleted)</span>`;
+                }
+
                 tb.innerHTML += `<tr><td>${t.description}</td><td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">-- Select Team --</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td><td><select id="m-${d.id}"><option value="">-- Member --</option></select></td><td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td></tr>`;
-                sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${t.assignedToName || 'Unassigned'}</td><td>
+                sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${assigneeDisplay}</td><td>
                     <select onchange="manualStatusUpdate('${d.id}', this.value)" style="padding:4px; font-size:12px;">
                         <option value="to-do" ${t.status==='to-do'?'selected':''}>To-Do</option>
                         <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
@@ -708,34 +715,29 @@
                     </select></td></tr>`;
             });
         };
+        
         window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = '<option value="">-- Select Member --</option>' + window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         
-        // FIXED: Assignment validation to prevent crashing
         window.assignSpecificTask = async (tid) => {
             try {
                 const email = document.getElementById(`m-${tid}`).value;
                 const tId = document.getElementById(`t-${tid}`).value;
                 
                 if (!tId) return alert("Please select a Team first.");
-                if (!email) return alert("Please select a Member from the team.");
+                if (!email) return alert("Please select a Member from the team dropdown.");
 
                 const member = window.workspaceMembers.find(m => m.email === email);
-                if (!member) return alert("System error finding member details. Try refreshing.");
+                if (!member) return alert("Error: Member details not found.");
 
                 const adminName = document.querySelector('.user-name').innerText;
                 const teamSelect = document.getElementById(`t-${tid}`);
                 const teamName = teamSelect.options[teamSelect.selectedIndex].text;
 
                 await updateDoc(doc(db, "tasks", tid), { 
-                    assignedToEmail: email, 
-                    assignedToName: member.name, 
-                    assignedTeamId: tId, 
-                    assignedTeamName: teamName, 
-                    assignedByName: adminName, 
-                    status: 'assigned' 
+                    assignedToEmail: email, assignedToName: member.name, assignedTeamId: tId, 
+                    assignedTeamName: teamName, assignedByName: adminName, status: 'assigned' 
                 });
 
-                // Add background notification
                 try {
                     await addDoc(collection(db, "notifications"), { forEmail: email, fromEmail: auth.currentUser.email, message: `New task assigned by ${adminName}.`, timestamp: Date.now(), read: false, bookmarked: false });
                 } catch(ne) { console.log("Notification hook skipped"); }
@@ -792,11 +794,19 @@
         // --- MEMBER CORE MODULES ---
         async function initMemberDashboard(email, data) {
             document.getElementById('member-view').classList.remove('hidden');
-            document.getElementById('m-side-name').innerText = data.name;
+            document.getElementById('m-side-name').innerText = data.name || "";
             document.getElementById('m-side-team').innerText = data.teamName || "General Team";
             document.getElementById('m-side-company').innerText = data.company || "Org";
-            document.getElementById('mp-name').value = data.name; document.getElementById('mp-email').value = email;
-            document.getElementById('mp-company').value = data.company; document.getElementById('mp-team').value = data.teamName;
+            
+            // Map data securely to Member Profile
+            document.getElementById('mp-name').value = data.name || ""; 
+            document.getElementById('mp-email').value = email || "";
+            document.getElementById('mp-phone').value = data.phone || "";
+            document.getElementById('mp-company').value = data.company || ""; 
+            document.getElementById('mp-team').value = data.teamName || "";
+            document.getElementById('mp-address').value = data.residentialAddress || "";
+            document.getElementById('mp-em-name').value = data.emergencyName || "";
+            document.getElementById('mp-em-num').value = data.emergencyPhone || "";
             
             onSnapshot(query(collection(db, "tasks"), where("assignedToEmail", "==", email)), async (snap) => {
                 const tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
@@ -813,7 +823,7 @@
             tasks.forEach(t => {
                 if(t.status==='Done'||t.status==='completed') s.done++;
                 else if(t.status==='WIP'||t.status==='in-progress') s.wip++;
-                else if(t.status==='To Do'||t.status==='to-do') s.todo++;
+                else if(t.status==='To Do'||t.status==='to-do'||t.status==='assigned') s.todo++;
                 else if(t.status==='On Hold') s.hold++;
 
                 grid.innerHTML += `
