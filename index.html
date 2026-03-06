@@ -10,7 +10,7 @@
             --primary: #2563eb; --bg: #f8fafc; --surface: #ffffff; --text: #0f172a; --border: #e2e8f0; 
         }
         :root[data-theme="dark"] { 
-            --primary: #3b82f6; --bg: #0f172a; --surface: #1e293b; --text: #f1f5f9; --border: #334155; 
+            --primary: #3b82f6; --bg: #3B5AA7; --surface: #1e293b; --text: #ffffff; --border: #334155; 
         }
 
         body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; transition: background 0.3s; }
@@ -410,9 +410,9 @@
             if(!name || !date || !desc) return alert("Missing details! Please provide Name, End Date, and Description.");
 
             if(!editId) {
-                const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name), where("endDate", "==", date));
+                const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name);
                 const dupSnap = await getDocs(dupCheck);
-                if(!dupSnap.empty) return alert("A project with the exact same name and end date already exists.");
+                if(!dupSnap.empty) return alert("A project with the exact same name already exists.");
             }
 
             const payload = { name, endDate: date, description: desc, createdBy: user.email, status: 'active' };
