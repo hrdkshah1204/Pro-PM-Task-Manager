@@ -57,7 +57,6 @@
         .task-details-row { background: var(--bg); display: none; }
         .task-details-row.open { display: table-row; }
         
-        /* TASK LIST ALIGNMENT FIX */
         .task-list { margin: 0; padding: 10px; list-style: none; background: var(--bg); }
         .task-list li { 
             background: var(--surface); 
@@ -131,8 +130,8 @@
             
             <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
                 <div class="org-badge" id="display-org-name">Organization</div>
-                <div style="font-size: 11px; color: #64748b;">Logged in as</div>
-                <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px; margin-top: 4px;">User Name</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 5px;">Logged in as</div>
+                <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">User Name</div>
                 <div class="role-pill">ADMIN</div>
             </div>
             <button class="outline" onclick="signOutUser()" style="padding: 10px; width: 100%;">Log Out</button>
@@ -402,7 +401,7 @@
             alert("Phone Updated!");
         };
 
-        // SUB 1: PROJECTS (RE-ADDED DELETE)
+        // SUB 1: PROJECTS (NOW WITH USER PRIVACY FILTER)
         window.saveProject = async () => {
             const user = auth.currentUser;
             const name = document.getElementById('p-name').value;
@@ -414,7 +413,10 @@
         };
 
         window.loadProjectsTable = async () => {
-            const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+            const user = auth.currentUser;
+            if(!user) return;
+            // FIXED: Only fetching projects created by THIS user email
+            const q = query(collection(db, "projects"), where("createdBy", "==", user.email), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
             const tbody = document.getElementById('project-table-body');
             tbody.innerHTML = '';
@@ -435,7 +437,7 @@
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
         };
 
-        window.deleteProject = async (id) => { if(confirm("Delete this project and all associated data?")) { await deleteDoc(doc(db, "projects", id)); loadProjectsTable(); } };
+        window.deleteProject = async (id) => { if(confirm("Delete this project?")) { await deleteDoc(doc(db, "projects", id)); loadProjectsTable(); } };
 
         window.cancelEdit = () => { 
             document.getElementById('edit-project-id').value = ''; 
@@ -445,9 +447,11 @@
             document.getElementById('btn-cancel-edit').classList.add('hidden'); 
         };
 
-        // SUB 2: TASKS (X ALIGNMENT RESTORED)
+        // SUB 2: TASKS
         window.loadProjectDropdown = async () => {
-            const snap = await getDocs(collection(db, "projects"));
+            const user = auth.currentUser;
+            const q = query(collection(db, "projects"), where("createdBy", "==", user.email));
+            const snap = await getDocs(q);
             const dd = document.getElementById('t-project-id'); dd.innerHTML = '<option value="">-- Select Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
@@ -458,7 +462,11 @@
             document.getElementById('t-desc').value = ''; loadTasksTable();
         };
         window.loadTasksTable = async () => {
-            const [pSnap, tSnap] = await Promise.all([getDocs(collection(db, "projects")), getDocs(collection(db, "tasks"))]);
+            const user = auth.currentUser;
+            const [pSnap, tSnap] = await Promise.all([
+                getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email))), 
+                getDocs(collection(db, "tasks"))
+            ]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
             pSnap.forEach(d => {
                 const tasks = tSnap.docs.filter(t => t.data().projectId === d.id);
@@ -471,16 +479,18 @@
         window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
-        // SUB 3: TEAMS
+        // SUB 3: TEAMS (ALSO FILTERED)
         window.saveTeam = async () => {
+            const user = auth.currentUser;
             const name = document.getElementById('team-name').value;
             const editId = document.getElementById('edit-team-id').value;
             if(editId) await updateDoc(doc(db, "teams", editId), {name});
-            else await addDoc(collection(db, "teams"), {name, createdAt: new Date().toISOString()});
+            else await addDoc(collection(db, "teams"), {name, createdBy: user.email, createdAt: new Date().toISOString()});
             cancelTeamEdit(); loadTeamsTable();
         };
         window.loadTeamsTable = async () => {
-            const snap = await getDocs(collection(db, "teams"));
+            const user = auth.currentUser;
+            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
             const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
             snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button onclick="navTo('sub4')">+ Members</button></td><td><button onclick="editTeam('${d.id}')">Edit</button> <button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`);
         };
@@ -493,18 +503,20 @@
         window.cancelTeamEdit = () => { document.getElementById('team-name').value = ''; document.getElementById('edit-team-id').value = ''; document.getElementById('btn-cancel-team-edit').classList.add('hidden'); };
         window.deleteTeam = async (id) => { if(confirm("Delete team?")) { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } };
 
-        // SUB 4: MEMBERS (RESTORED EDIT)
+        // SUB 4: MEMBERS (FILTERED)
         window.loadTeamDropdownForMembers = async () => {
-            const snap = await getDocs(collection(db, "teams"));
+            const user = auth.currentUser;
+            const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
             const dd = document.getElementById('m-team-id'); dd.innerHTML = '<option value="">-- Select Team --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         window.saveMember = async () => {
+            const user = auth.currentUser;
             const email = document.getElementById('m-email').value.toLowerCase();
             const tid = document.getElementById('m-team-id').value;
             const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
             if(!email || !tid) return alert("Fill required fields.");
-            await setDoc(doc(db, "users", email), {name: document.getElementById('m-name').value, phone: document.getElementById('m-phone').value, teamId: tid, teamName: tname, role: 'member', email}, {merge: true});
+            await setDoc(doc(db, "users", email), {name: document.getElementById('m-name').value, phone: document.getElementById('m-phone').value, teamId: tid, teamName: tname, role: 'member', email, adminEmail: user.email}, {merge: true});
             cancelMemberEdit(); loadMembersTable();
         };
         window.editMember = async (email) => {
@@ -512,7 +524,7 @@
             const m = d.data();
             document.getElementById('m-name').value = m.name;
             document.getElementById('m-email').value = m.email;
-            document.getElementById('m-email').disabled = true; // Lock email for uniqueness
+            document.getElementById('m-email').disabled = true;
             document.getElementById('m-phone').value = m.phone;
             document.getElementById('m-team-id').value = m.teamId;
             document.getElementById('edit-member-id').value = email;
@@ -530,7 +542,8 @@
             document.getElementById('btn-cancel-member').classList.add('hidden');
         };
         window.loadMembersTable = async () => {
-            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member")));
+            const user = auth.currentUser;
+            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)));
             const tbody = document.getElementById('member-table-body'); tbody.innerHTML = '';
             snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td><td>
                 <button onclick="editMember('${d.id}')">Edit</button>
@@ -542,12 +555,17 @@
         // SUB 5: ASSIGNMENT
         window.workspaceMembers = []; window.workspaceTeams = [];
         window.loadAssignProjectDropdown = async () => {
-            const snap = await getDocs(collection(db, "projects"));
+            const user = auth.currentUser;
+            const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
             const dd = document.getElementById('assign-project-select'); dd.innerHTML = '<option value="">-- Select Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         window.fetchTeamsAndMembers = async () => {
-            const [tSnap, mSnap] = await Promise.all([getDocs(collection(db, "teams")), getDocs(query(collection(db, "users"), where("role", "==", "member")))]);
+            const user = auth.currentUser;
+            const [tSnap, mSnap] = await Promise.all([
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email))), 
+                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)))
+            ]);
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         };
@@ -579,7 +597,13 @@
 
         // SUB 6: ANALYTICS
         window.runAnalytics = async () => {
-            const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([getDocs(collection(db, "projects")), getDocs(collection(db, "tasks")), getDocs(collection(db, "teams")), getDocs(query(collection(db, "users"), where("role", "==", "member")))]);
+            const user = auth.currentUser;
+            const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
+                getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email))), 
+                getDocs(collection(db, "tasks")), 
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email))), 
+                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)))
+            ]);
             document.getElementById('stat-projects').innerText = pSnap.size;
             document.getElementById('stat-teams').innerText = teamSnap.size;
             document.getElementById('stat-members').innerText = mSnap.size;
