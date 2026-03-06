@@ -151,7 +151,7 @@
                 
                 <h3>Active Projects</h3>
                 <table>
-                    <thead><tr><th>Project Name</th><th>End Date</th><th style="width: 180px;">Actions</th></tr></thead>
+                    <thead><tr><th>Project Name</th><th>End Date</th><th>Status</th><th style="width: 180px;">Actions</th></tr></thead>
                     <tbody id="project-table-body"></tbody>
                 </table>
             </div>
@@ -217,9 +217,9 @@
                     <thead><tr><th>Task</th><th>Select Team</th><th>Select Member</th><th>Action</th></tr></thead>
                     <tbody id="assign-table-body"></tbody>
                 </table>
-                <h3 style="margin-top: 40px;">Allocation Summary</h3>
+                <h3 style="margin-top: 40px;">Current Allocation Summary</h3>
                 <table>
-                    <thead><tr><th>Task Description</th><th>Team</th><th>Assigned To</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Task Description</th><th>Team</th><th>Assigned To</th><th>Status Overwrite</th></tr></thead>
                     <tbody id="allocation-summary-body"></tbody>
                 </table>
             </div>
@@ -354,7 +354,6 @@
                     document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name || user.email);
                     document.getElementById('display-org-name').innerText = data.company || "ProPM Workspace";
                     
-                    // Pre-fill Settings
                     document.getElementById('set-email').value = user.email;
                     document.getElementById('set-phone').value = data.phone || "";
 
@@ -393,7 +392,6 @@
             if(pageId === 'sub6') runAnalytics();
         };
 
-        // SETTINGS UPDATE
         window.updateAdminProfile = async () => {
             const user = auth.currentUser;
             const phone = document.getElementById('set-phone').value;
@@ -401,10 +399,6 @@
             alert("Phone Updated!");
         };
 
-
-	//--------------------------------------------------------------
-        //-----------SUB 1: PROJECTS (NOW WITH USER PRIVACY FILTER)-----
-	//--------------------------------------------------------------
         // --- SUB PAGE 1 LOGIC ---
         window.saveProject = async () => {
             const user = auth.currentUser;
@@ -415,7 +409,6 @@
 
             if(!name || !date || !desc) return alert("Missing details! Please provide Name, End Date, and Description.");
 
-            // Failsafe: check for duplicates (same name and date for this admin)
             if(!editId) {
                 const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name), where("endDate", "==", date));
                 const dupSnap = await getDocs(dupCheck);
@@ -481,10 +474,7 @@
 
         window.deleteProject = async (id) => { if(confirm("Delete project?")) { await deleteDoc(doc(db,"projects",id)); loadProjectsTable(); } };
 
-
-	//--------------------------------------------------------------
-        //---------------------SUB 2: TASKS-----------------------------
-	//--------------------------------------------------------------
+        // --- SUB PAGE 2: TASKS ---
         window.loadProjectDropdown = async () => {
             const user = auth.currentUser;
             const q = query(collection(db, "projects"), where("createdBy", "==", user.email));
@@ -516,10 +506,7 @@
         window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
-
-	//--------------------------------------------------------------
-        //-----------------SUB 3: TEAMS (ALSO FILTERED)-----------------
-	//--------------------------------------------------------------
+        // --- SUB PAGE 3: TEAMS ---
         window.saveTeam = async () => {
             const user = auth.currentUser;
             const name = document.getElementById('team-name').value;
@@ -532,7 +519,7 @@
             const user = auth.currentUser;
             const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
             const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button onclick="navTo('sub4')">+ Members</button></td><td><button onclick="editTeam('${d.id}')">Edit</button> <button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`);
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td><button onclick="navTo('sub4')">+ Members</button></td><td class="action-btns"><button class="outline" onclick="editTeam('${d.id}')">Edit</button> <button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`);
         };
         window.editTeam = async (id) => { 
             const d = await getDoc(doc(db, "teams", id)); 
@@ -543,10 +530,7 @@
         window.cancelTeamEdit = () => { document.getElementById('team-name').value = ''; document.getElementById('edit-team-id').value = ''; document.getElementById('btn-cancel-team-edit').classList.add('hidden'); };
         window.deleteTeam = async (id) => { if(confirm("Delete team?")) { await deleteDoc(doc(db, "teams", id)); loadTeamsTable(); } };
 
-
-	//--------------------------------------------------------------
-        //---------------SUB 4: MEMBERS (FILTERED)----------------------
-	//--------------------------------------------------------------
+        // --- SUB PAGE 4: MEMBERS ---
         window.loadTeamDropdownForMembers = async () => {
             const user = auth.currentUser;
             const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
@@ -588,17 +572,14 @@
             const user = auth.currentUser;
             const snap = await getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)));
             const tbody = document.getElementById('member-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td><td>
-                <button onclick="editMember('${d.id}')">Edit</button>
+            snap.forEach(d => tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td><td class="action-btns">
+                <button class="outline" onclick="editMember('${d.id}')">Edit</button>
                 <button class="danger" onclick="deleteMember('${d.id}')">Del</button>
             </td></tr>`);
         };
         window.deleteMember = async (id) => { if(confirm("Remove member?")) { await deleteDoc(doc(db, "users", id)); loadMembersTable(); } };
 
-
-	//--------------------------------------------------------------
-	//---------------------- SUB PAGE 5 LOGIC ----------------------
-	//--------------------------------------------------------------
+        // --- SUB PAGE 5 LOGIC ---
         window.workspaceTeams = []; window.workspaceMembers = [];
         window.loadAssignProjectDropdown = async () => {
             const user = auth.currentUser;
@@ -610,8 +591,8 @@
         window.fetchTeamsAndMembers = async () => {
             const user = auth.currentUser;
             const [tSnap, mSnap] = await Promise.all([
-                getDocs(collection(db, "teams")), 
-                getDocs(query(collection(db, "users"), where("role", "==", "member")))
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email))), 
+                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)))
             ]);
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
@@ -662,22 +643,7 @@
 
         window.manualStatusUpdate = async (tid, s) => { await updateDoc(doc(db, "tasks", tid), { status: s }); };
 
-        // Helper navigation and standard Auth functions
-        window.navTo = (id) => {
-            document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.remove('hidden');
-            if(id === 'sub1') loadProjectsTable();
-            if(id === 'sub2') { loadTasksTable(); loadProjectDropdown(); }
-            if(id === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); }
-        };
-        window.signInWithEmail = () => signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
-        window.signOutUser = () => signOut(auth);
-        window.toggleAuthMode = () => { /* basic toggle auth logic */ };
-
-	//--------------------------------------------------------------
-        //-----------------------SUB Page 6: ANALYTICS------------------
-	//--------------------------------------------------------------
+        // --- SUB PAGE 6: ANALYTICS ---
         window.runAnalytics = async () => {
             const user = auth.currentUser;
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
@@ -701,7 +667,7 @@
             const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
             teamSnap.forEach(teamDoc => {
                 const teamTasks = tSnap.docs.filter(t => t.data().assignedTeamId === teamDoc.id);
-                tBody.innerHTML += `<tr><td>${teamDoc.data().name}</td><td>${teamTasks.length}</td><td>${teamTasks.filter(t => t.data().status==='assigned').length}</td><td>${teamTasks.filter(t => t.data().status==='in-progress').length}</td><td>${teamTasks.filter(t => t.data().status==='completed').length}</td></tr>`;
+                tBody.innerHTML += `<tr><td>${teamDoc.data().name}</td><td>${teamTasks.length}</td><td>${teamTasks.filter(t => t.data().status==='assigned' || t.data().status==='to-do').length}</td><td>${teamTasks.filter(t => t.data().status==='in-progress').length}</td><td>${teamTasks.filter(t => t.data().status==='completed').length}</td></tr>`;
             });
         };
     </script>
