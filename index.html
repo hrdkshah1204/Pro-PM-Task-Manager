@@ -450,7 +450,7 @@
                 if(countSnap.size >= 20) return alert("Free Tier Limit Reached: Max 20 projects allowed. Upgrade to Pro for more.");
                 
                 // Failsafe
-                const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name), where("endDate", "==", date));
+                const dupCheck = query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name));
                 const dupSnap = await getDocs(dupCheck);
                 if(!dupSnap.empty) return alert("Project exists.");
             }
