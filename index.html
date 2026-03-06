@@ -13,9 +13,10 @@
             --primary: #3b82f6; --bg: #0f172a; --surface: #1e293b; --text: #f1f5f9; --border: #334155; 
         }
 
-        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; transition: background 0.3s; }
-        .hidden { display: none !important; }
-        h1, h2, h3 { color: var(--primary); margin: 0; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); 
+		margin: 0; padding: 0; transition: background 0.3s; 
+		overflow-x: hidden; /* This prevents horizontal scrolling */
+	}
         
         button { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
@@ -128,7 +129,18 @@
                 <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">Admin Name</div>
                 <div class="role-pill">ADMIN</div>
             </div>
-        </div> <div class="view-container">
+        </div> 
+
+        <div class="view-container">
+            <div class="top-quick-access">
+                <button class="quick-btn" onclick="navTo('sub8')" style="position: relative;">
+                    🔔 Notifications
+                    <span id="admin-notif-dot" class="hidden" style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; border: 2px solid var(--surface);"></span>
+                </button>
+                <button class="quick-btn" onclick="navTo('sub7')">👤 Profile</button>
+                <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
+            </div>
+
 
         <div class="view-container">
             <div class="top-quick-access">
