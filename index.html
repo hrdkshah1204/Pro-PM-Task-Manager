@@ -192,15 +192,18 @@
                             <button id="btn-cancel-team-edit" class="outline hidden" onclick="cancelTeamEdit()">Cancel</button>
                         </div>
                     </div>
-                    <table>
-			<thead>
-				<tr>
-					<th>Team Name</th><th style="width: 250px;">Actions</th>
-//<th>Member Count Count</th>
-				</tr>
-			</thead>
-			<tbody id="team-table-body"></tbody>
-		</table>
+                    <table style="margin-top: 20px;">
+                        <thead>
+                            <tr>
+                                <th>Team Name</th>
+                                <th style="text-align: center; width: 100px;">Capacity</th>
+                                <th style="text-align: center; width: 120px;">Add Members</th>
+                                <th style="text-align: center; width: 80px;">Edit</th>
+                                <th style="text-align: center; width: 80px;">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="team-table-body"></tbody>
+                    </table>
                 </div>
 
                 <div id="sub4" class="sub-page hidden">
@@ -575,7 +578,7 @@
             loadTasksTable();
         };
 
-        window.loadTasksTable = async () => {
+        
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
             
@@ -643,8 +646,7 @@
             document.getElementById('team-name').value = ''; loadTeamsTable();
         };
        
-	
-	 window.loadTeamsTable = async () => {
+window.loadTeamsTable = async () => {
             const adminEmail = auth.currentUser.email;
             
             // Fetch both teams AND members at the same time for efficiency
@@ -661,19 +663,20 @@
                 const memberCount = membersSnap.docs.filter(m => m.data().teamId === d.id).length;
                 
                 tbody.innerHTML += `<tr>
-                    <td>${d.data().name}</td>
-                    <td class="action-btns" style="align-items: center;">
-                        <span style="font-size: 13px; color: #64748b; margin-right: 10px; font-weight: 600;">
-                            ${memberCount} / 10
-                        </span>
-                        <button class="outline" onclick="navTo('sub4')">+ Members</button>
-                        <button onclick="editTeam('${d.id}')">Edit</button>
-                        <button class="danger" onclick="deleteTeam('${d.id}')">Del</button>
+                    <td style="vertical-align: middle; font-weight: 500;">${d.data().name}</td>
+                    <td style="text-align: center; vertical-align: middle; font-weight: 600; color: #64748b;">${memberCount} / 10</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button class="outline" onclick="navTo('sub4')" style="width: 100%; padding: 8px;">+ Members</button>
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button onclick="editTeam('${d.id}')" style="width: 100%; padding: 8px;">Edit</button>
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button class="danger" onclick="deleteTeam('${d.id}')" style="width: 100%; padding: 8px;">Del</button>
                     </td>
                 </tr>`;
             });
         };
-
 
         window.editTeam = async (id) => { 
             const d = await getDoc(doc(db, "teams", id)); 
