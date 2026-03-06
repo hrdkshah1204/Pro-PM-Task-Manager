@@ -117,11 +117,10 @@
         <div class="sidebar">
             <div class="brand-logo">ProPM</div>
             <button class="sidebar-btn active" onclick="navTo('sub1')">1. Create Project</button>
-            <button class="sidebar-btn" onclick="navTo('sub2')">2. Create Tasks</button>
-            <button class="sidebar-btn" onclick="navTo('sub3')">3. Add Teams</button>
-            <button class="sidebar-btn" onclick="navTo('sub4')">4. Add Members</button>
-            <button class="sidebar-btn" onclick="navTo('sub5')">5. Assign Project</button>
-            <button class="sidebar-btn" onclick="navTo('sub6')">6. Analytics</button>
+            <button class="sidebar-btn" onclick="navTo('sub3')">2. Add Teams</button>
+            <button class="sidebar-btn" onclick="navTo('sub5')">3. Assign Project</button>
+            <button class="sidebar-btn" onclick="navTo('sub6')">4. Analytics</button>
+
             <div style="flex: 1;"></div>
             <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
                 <div class="org-badge" id="display-org-name">Organization</div>
@@ -129,7 +128,7 @@
                 <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">Admin Name</div>
                 <div class="role-pill">ADMIN</div>
             </div>
-        </div>
+        </div> 
 
         <div class="view-container">
             <div class="top-quick-access">
@@ -452,11 +451,13 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // Note: Google users are verified by default, but keep this check
                 if (!user.emailVerified) {
-                    document.getElementById('auth-status').innerText = "Please verify your email before logging in. Check your inbox!";
+                    document.getElementById('auth-status').innerText = "Please verify your email!";
                     signOut(auth); return;
                 }
                 const userSnap = await getDoc(doc(db, "users", user.email));
+                
                 if (userSnap.exists()) {
                     const data = userSnap.data();
                     document.getElementById('login-view').classList.add('hidden');
@@ -464,24 +465,24 @@
                         document.getElementById('admin-view').classList.remove('hidden');
                         document.getElementById('display-org-name').innerText = data.company || "Workspace";
                         document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name);
-                        document.getElementById('set-name').value = data.name || "";
-                        document.getElementById('set-email').value = user.email;
-                        document.getElementById('set-phone').value = data.phone || "";
-                        document.getElementById('set-company').value = data.company || "";
-                        document.getElementById('set-size').value = data.teamSize || "1 - 10";
-                        document.getElementById('set-address').value = data.companyAddress || "";
-			loadAdminNotifications();
+                        // ... (rest of your profile population code) ...
+                        loadAdminNotifications();
                         navTo('sub1');
                     } else if (data.role === 'member') {
                         initMemberDashboard(user.email, data);
                     } else {
                         document.getElementById('onboarding-view').classList.remove('hidden');
                     }
+                } else {
+                    // RECTIFICATION: This handles a fresh login where the user isn't in DB yet
+                    document.getElementById('login-view').classList.add('hidden');
+                    document.getElementById('onboarding-view').classList.remove('hidden');
                 }
             } else {
                 document.getElementById('login-view').classList.remove('hidden');
                 document.getElementById('admin-view').classList.add('hidden');
                 document.getElementById('member-view').classList.add('hidden');
+                document.getElementById('onboarding-view').classList.add('hidden');
             }
         });
 
