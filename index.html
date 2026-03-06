@@ -213,11 +213,11 @@
             <button class="sidebar-btn" onclick="navTo('sub6')">6. Analytics</button>
 
             <div style="flex: 1;"></div>
-
-            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Logged in as: <br><strong class="user-name"></strong></div>
-
-            <button class="outline" onclick="signOutUser()">Log Out</button>
-
+            <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Logged in as</div>
+                <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px; margin-top: 4px;">User Name</div>
+            </div>
+            <button class="outline" onclick="signOutUser()" style="padding: 10px;">Log Out</button>
         </div>
 
 
