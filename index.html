@@ -22,10 +22,11 @@
         button.danger { background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 500; cursor: pointer; }
         button.outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
         button.outline:hover { background: rgba(37, 99, 235, 0.1); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         
         input, select, textarea { padding: 10px; border: 1px solid var(--border); border-radius: 6px; width: 100%; box-sizing: border-box; font-family: inherit; background: var(--surface); color: var(--text); }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        input:disabled, textarea:disabled { opacity: 0.6; cursor: not-allowed; background: var(--bg); }
+        input:disabled, textarea:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; background: var(--bg); color: #64748b; }
         
         #login-view { max-width: 400px; margin: 10vh auto; background: var(--surface); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border: 1px solid var(--border); }
         #admin-view, #member-view { display: flex; min-height: 100vh; }
@@ -59,8 +60,8 @@
 
         /* Member Grid System */
         .task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px; }
-        .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; height: fit-content; }
-        .project-header { background: var(--primary); color: white; padding: 12px; font-weight: bold; }
+        .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; height: fit-content; transition: 0.3s; }
+        .project-header { background: var(--primary); color: white; padding: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
         .card-table { width: 100%; border-collapse: collapse; }
         .card-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
         .card-table tr:last-child td { border-bottom: none; }
@@ -74,6 +75,7 @@
         .stats-summary { width: 100%; margin-top: 20px; text-align: center; }
         .stats-summary td { font-size: 18px; font-weight: 800; color: var(--primary); }
         .settings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .overdue-badge { background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -149,7 +151,6 @@
                     <input type="hidden" id="edit-project-id">
                     <button id="btn-save-project" onclick="saveProject()">Save Project</button>
                     <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left:10px">Cancel</button>
-                    
                     <h3 style="margin-top: 30px;">Active Projects</h3>
                     <table>
                         <thead><tr><th>Project Name</th><th>End Date</th><th>Description</th><th>Actions</th></tr></thead>
@@ -201,7 +202,10 @@
                 <div id="sub5" class="sub-page hidden">
                     <h3>Assign Project Tasks</h3>
                     <select id="assign-project-select" onchange="loadAssignmentTable()" style="max-width: 400px; margin-bottom: 20px;"></select>
-                    <table><thead><tr><th>Task</th><th>Select Team</th><th>Select Member</th><th>Action</th></tr></thead><tbody id="assign-table-body"></tbody></table>
+                    <table>
+                        <thead><tr><th>Task</th><th>Select Team</th><th>Select Member</th><th>Target Date</th><th>Action</th></tr></thead>
+                        <tbody id="assign-table-body"></tbody>
+                    </table>
                     <h3 style="margin-top: 40px;">Current Allocation Summary</h3>
                     <table><thead><tr><th>Task</th><th>Team</th><th>Assigned To</th><th>Status Overwrite</th></tr></thead><tbody id="allocation-summary-body"></tbody></table>
                 </div>
@@ -289,12 +293,10 @@
             </div>
             <button class="sidebar-btn" onclick="navToMember('m-sub1')">🏠 My Dashboard</button>
             <button class="sidebar-btn" onclick="navToMember('m-sub2')">👤 My Profile</button>
-            <button class="sidebar-btn" onclick="navToMember('m-sub3')">🔔 Notifications</button>
             <div style="flex: 1;"></div>
         </div>
         <div class="view-container">
             <div class="top-quick-access">
-                <button class="quick-btn" onclick="navToMember('m-sub1')" title="Home">🏠 Home</button>
                 <button class="quick-btn" onclick="navToMember('m-sub3')" title="Notifications">🔔 Alerts</button>
                 <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
             </div>
@@ -369,7 +371,6 @@
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({prompt: 'select_account'});
 
-        // Secondary App Instance for Secure Background User Creation
         const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
         const secondaryAuth = getAuth(secondaryApp);
 
@@ -430,7 +431,6 @@
                         document.getElementById('display-org-name').innerText = data.company || "Workspace";
                         document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name);
                         
-                        // Populate Admin Settings fields
                         document.getElementById('set-name').value = data.name || "";
                         document.getElementById('set-email').value = user.email;
                         document.getElementById('set-phone').value = data.phone || "";
@@ -463,7 +463,6 @@
             location.reload();
         };
 
-        // --- ADMIN MODULES ---
         window.navTo = (id) => {
             document.querySelectorAll('.sub-page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('#admin-view .sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -509,13 +508,8 @@
             snap.forEach(d => {
                 const p = d.data();
                 tbody.innerHTML += `<tr>
-                    <td>${p.name}</td>
-                    <td>${p.endDate}</td>
-                    <td>${p.description || 'No description provided.'}</td>
-                    <td class="action-btns">
-                        <button onclick="editProject('${d.id}')">Edit</button>
-                        <button class="danger" onclick="deleteProject('${d.id}')">Del</button>
-                    </td>
+                    <td>${p.name}</td><td>${p.endDate}</td><td>${p.description || 'No description provided.'}</td>
+                    <td class="action-btns"><button onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Del</button></td>
                 </tr>`;
             });
         };
@@ -569,11 +563,7 @@
             const snap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
             const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
             snap.forEach(d => {
-                tbody.innerHTML += `<tr><td>${d.data().name}</td><td class="action-btns">
-                    <button class="outline" onclick="navTo('sub4')">+ Members</button>
-                    <button onclick="editTeam('${d.id}')">Edit</button>
-                    <button class="danger" onclick="deleteTeam('${d.id}')">Del</button>
-                </td></tr>`;
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td class="action-btns"><button class="outline" onclick="navTo('sub4')">+ Members</button><button onclick="editTeam('${d.id}')">Edit</button><button class="danger" onclick="deleteTeam('${d.id}')">Del</button></td></tr>`;
             });
         };
         window.editTeam = async (id) => { 
@@ -590,7 +580,6 @@
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
 
-        // FIXED: The email variable is explicitly saved in the document to prevent dropdown crashes
         window.saveMember = async () => {
             const adminEmail = auth.currentUser.email;
             const email = document.getElementById('m-email').value.toLowerCase().trim();
@@ -608,31 +597,18 @@
                     if(memSnap.size >= 10) return alert("Limit: 10 Members per team.");
 
                     const randomPassword = Math.random().toString(36).slice(-8);
-
                     const newCred = await createUserWithEmailAndPassword(secondaryAuth, email, randomPassword);
                     await sendEmailVerification(newCred.user);
                     await signOut(secondaryAuth);
 
                     await setDoc(doc(db, "users", email), {
-                        name: name, 
-                        email: email, 
-                        phone: phone, 
-                        teamId: tid, 
-                        teamName: tname, 
-                        role: 'member', 
-                        adminEmail: adminEmail, 
-                        company: document.getElementById('display-org-name').innerText
+                        name: name, email: email, phone: phone, teamId: tid, teamName: tname, 
+                        role: 'member', adminEmail: adminEmail, company: document.getElementById('display-org-name').innerText
                     });
 
                     alert(`Member created!\n\nEmail: ${email}\nPassword: ${randomPassword}\n\nPlease copy this password and share it securely. The user has been emailed a verification link.`);
                 } else {
-                    await updateDoc(doc(db, "users", email), {
-                        name: name,
-                        email: email, 
-                        phone: phone,
-                        teamId: tid,
-                        teamName: tname
-                    });
+                    await updateDoc(doc(db, "users", email), { name: name, email: email, phone: phone, teamId: tid, teamName: tname });
                     alert("Member details updated.");
                 }
                 cancelMemberEdit();
@@ -673,9 +649,7 @@
                 await deleteDoc(doc(db, "users", id)); 
                 const assignedTasks = await getDocs(query(collection(db, "tasks"), where("assignedToEmail", "==", id)));
                 assignedTasks.forEach(async (t) => {
-                    await updateDoc(doc(db, "tasks", t.id), {
-                        assignedToEmail: "", assignedToName: "", assignedTeamId: "", assignedTeamName: "", status: "to-do" 
-                    });
+                    await updateDoc(doc(db, "tasks", t.id), { assignedToEmail: "", assignedToName: "", assignedTeamId: "", assignedTeamName: "", status: "to-do" });
                 });
                 loadMembersTable(); 
             }
@@ -687,8 +661,6 @@
             const dd = document.getElementById('assign-project-select'); dd.innerHTML = '<option value="">-- Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
-
-        // FIXED: Maps email correctly even if the database field is missing for older users
         window.fetchTeamsAndMembers = async () => {
             const [tSnap, mSnap] = await Promise.all([
                 getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email))), 
@@ -704,15 +676,24 @@
             const tSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
             const tb = document.getElementById('assign-table-body'); tb.innerHTML = '';
             const sb = document.getElementById('allocation-summary-body'); sb.innerHTML = '';
+            
+            await checkOverdueAndNotify(tSnap.docs.map(d => ({id: d.id, ...d.data()})));
+
             tSnap.forEach(d => {
                 const t = d.data();
-                
                 let assigneeDisplay = t.assignedToName || 'Unassigned';
                 if (t.assignedToEmail && !window.workspaceMembers.some(m => m.email === t.assignedToEmail)) {
                     assigneeDisplay = `<span style="color: #ef4444; font-weight: bold;">${t.assignedToName} (Deleted)</span>`;
                 }
 
-                tb.innerHTML += `<tr><td>${t.description}</td><td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">-- Select Team --</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td><td><select id="m-${d.id}"><option value="">-- Member --</option></select></td><td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td></tr>`;
+                tb.innerHTML += `<tr>
+                    <td>${t.description}</td>
+                    <td><select id="t-${d.id}" onchange="updateRowMembers('${d.id}')"><option value="">-- Select Team --</option>${window.workspaceTeams.map(wt => `<option value="${wt.id}">${wt.name}</option>`).join('')}</select></td>
+                    <td><select id="m-${d.id}"><option value="">-- Member --</option></select></td>
+                    <td><input type="date" id="date-${d.id}" value="${t.targetDate || ''}"></td>
+                    <td><button onclick="assignSpecificTask('${d.id}')">Assign</button></td>
+                </tr>`;
+                
                 sb.innerHTML += `<tr><td>${t.description}</td><td>${t.assignedTeamName || 'N/A'}</td><td>${assigneeDisplay}</td><td>
                     <select onchange="manualStatusUpdate('${d.id}', this.value)" style="padding:4px; font-size:12px;">
                         <option value="to-do" ${t.status==='to-do'?'selected':''}>To-Do</option>
@@ -725,14 +706,15 @@
         
         window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = '<option value="">-- Select Member --</option>' + window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         
-        // FIXED: Alert safety nets catch dropdown errors instead of crashing
         window.assignSpecificTask = async (tid) => {
             try {
                 const email = document.getElementById(`m-${tid}`).value;
                 const tId = document.getElementById(`t-${tid}`).value;
+                const targetDate = document.getElementById(`date-${tid}`).value;
                 
                 if (!tId) return alert("Please select a Team first.");
                 if (!email || email === "undefined") return alert("Please select a Member from the team dropdown.");
+                if (!targetDate) return alert("Please set a Target Date for completion.");
 
                 const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
                 if (!member) return alert("System Error: Member data mapping failed.");
@@ -740,17 +722,20 @@
                 const adminName = document.querySelector('.user-name').innerText;
                 const teamSelect = document.getElementById(`t-${tid}`);
                 const teamName = teamSelect.options[teamSelect.selectedIndex].text;
+                
+                const assignedAtDate = new Date().toISOString().split('T')[0];
 
                 await updateDoc(doc(db, "tasks", tid), { 
                     assignedToEmail: email, assignedToName: member.name, assignedTeamId: tId, 
-                    assignedTeamName: teamName, assignedByName: adminName, status: 'assigned' 
+                    assignedTeamName: teamName, assignedByName: adminName, status: 'assigned',
+                    targetDate: targetDate, assignedAt: assignedAtDate
                 });
 
                 try {
-                    await addDoc(collection(db, "notifications"), { forEmail: email, fromEmail: auth.currentUser.email, message: `New task assigned by ${adminName}.`, timestamp: Date.now(), read: false, bookmarked: false });
-                } catch(ne) { console.log("Notification hook skipped"); }
+                    await addDoc(collection(db, "notifications"), { forEmail: email, fromEmail: auth.currentUser.email, message: `New task assigned: Target Date ${targetDate}.`, timestamp: Date.now(), read: false, bookmarked: false });
+                } catch(ne) {}
 
-                alert("Task successfully assigned!");
+                alert("Task assigned with Target Date!");
                 loadAssignmentTable();
             } catch (error) {
                 alert("Assignment failed: " + error.message);
@@ -790,11 +775,12 @@
         window.updateAdminProfile = async () => await updateDoc(doc(db, "users", auth.currentUser.email), { companyAddress: document.getElementById('set-address').value, teamSize: document.getElementById('set-size').value });
 
         function loadAdminNotifications() {
-            onSnapshot(query(collection(db, "notifications"), where("fromEmail", "==", auth.currentUser.email), orderBy("timestamp", "desc")), (snap) => {
+            onSnapshot(query(collection(db, "notifications"), where("forEmail", "==", auth.currentUser.email)), (snap) => {
                 const tb = document.getElementById('admin-notif-table-body'); tb.innerHTML = '';
-                snap.docs.slice(0, 100).forEach(d => {
-                    const n = d.data();
-                    tb.innerHTML += `<tr style="background:${n.read?'transparent':'rgba(37,99,235,0.05)'}"><td>${n.message}</td><td><button onclick="toggleBookmark('${d.id}', ${n.bookmarked})">${n.bookmarked ? '⭐' : '☆'}</button></td></tr>`;
+                let docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                docs.sort((a, b) => b.timestamp - a.timestamp);
+                docs.slice(0, 100).forEach(n => {
+                    tb.innerHTML += `<tr style="background:${n.read?'transparent':'rgba(37,99,235,0.05)'}"><td>${n.message}<br><small style="color:#64748b">${new Date(n.timestamp).toLocaleString()}</small></td><td><button onclick="toggleBookmark('${n.id}', ${n.bookmarked})">${n.bookmarked ? '⭐' : '☆'}</button></td></tr>`;
                 });
             });
         }
@@ -806,7 +792,6 @@
             document.getElementById('m-side-team').innerText = data.teamName || "General Team";
             document.getElementById('m-side-company').innerText = data.company || "Org";
             
-            // Map data securely to Member Profile
             document.getElementById('mp-name').value = data.name || ""; 
             document.getElementById('mp-email').value = email || "";
             document.getElementById('mp-phone').value = data.phone || "";
@@ -820,36 +805,54 @@
                 const tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 const projs = await getDocs(collection(db, "projects"));
                 const pMap = {}; projs.forEach(p => pMap[p.id] = p.data().name);
+                await checkOverdueAndNotify(tasks);
                 renderMemberTasks(tasks, pMap);
             });
             loadMemberNotifications(email);
+        }
+
+        async function checkOverdueAndNotify(tasks) {
+            const today = new Date().toISOString().split('T')[0];
+            for (let t of tasks) {
+                if (t.targetDate && t.targetDate < today && t.status !== 'Done' && t.status !== 'completed' && !t.overdueNotified) {
+                    await updateDoc(doc(db, "tasks", t.id), { overdueNotified: true });
+                    if(t.adminEmail) await addDoc(collection(db, "notifications"), { forEmail: t.adminEmail, message: `OVERDUE: Task "${t.description}" assigned to ${t.assignedToName} is overdue!`, timestamp: Date.now(), read: false, bookmarked: false });
+                    if(t.assignedToEmail) await addDoc(collection(db, "notifications"), { forEmail: t.assignedToEmail, message: `OVERDUE: Your task "${t.description}" is past its target date (${t.targetDate}).`, timestamp: Date.now(), read: false, bookmarked: false });
+                }
+            }
         }
 
         function renderMemberTasks(tasks, pMap) {
             const grid = document.getElementById('m-task-grid'); grid.innerHTML = '';
             let s = { total: tasks.length, done: 0, wip: 0, todo: 0, hold: 0 };
             tasks.forEach(t => {
-                if(t.status==='Done'||t.status==='completed') s.done++;
+                const isDone = (t.status === 'Done' || t.status === 'completed');
+                if(isDone) s.done++;
                 else if(t.status==='WIP'||t.status==='in-progress') s.wip++;
                 else if(t.status==='To Do'||t.status==='to-do'||t.status==='assigned') s.todo++;
                 else if(t.status==='On Hold') s.hold++;
 
+                const overdueFlag = (t.targetDate && t.targetDate < new Date().toISOString().split('T')[0] && !isDone) ? `<span class="overdue-badge">OVERDUE</span>` : '';
+                const disabledAttr = isDone ? 'disabled' : '';
+                const minDate = t.assignedAt || ''; 
+
                 grid.innerHTML += `
-                <div class="project-card">
-                    <div class="project-header">${pMap[t.projectId] || 'Project'}</div>
+                <div class="project-card" style="${isDone ? 'opacity: 0.7;' : ''}">
+                    <div class="project-header">${pMap[t.projectId] || 'Project'} ${overdueFlag}</div>
                     <table class="card-table">
                         <tr><td><strong>Task:</strong> ${t.description}</td></tr>
-                        <tr><td><strong>Target:</strong> ${t.endDate || 'N/A'} | <strong>By:</strong> ${t.assignedByName || 'Admin'}</td></tr>
+                        <tr><td><strong>Target:</strong> ${t.targetDate || 'N/A'} | <strong>By:</strong> ${t.assignedByName || 'Admin'}</td></tr>
                         <tr><td><strong>Status:</strong> 
-                            <select onchange="updateTaskStatus('${t.id}', this.value)">
+                            <select id="stat-${t.id}" ${disabledAttr}>
                                 <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
-                                <option value="To Do" ${t.status==='To Do'?'selected':''}>To Do</option>
-                                <option value="WIP" ${t.status==='WIP'?'selected':''}>WIP</option>
-                                <option value="Done" ${t.status==='Done'?'selected':''}>Done</option>
+                                <option value="To Do" ${t.status==='To Do'||t.status==='to-do'?'selected':''}>To Do</option>
+                                <option value="WIP" ${t.status==='WIP'||t.status==='in-progress'?'selected':''}>WIP</option>
+                                <option value="Done" ${t.status==='Done'||t.status==='completed'?'selected':''}>Done</option>
                                 <option value="On Hold" ${t.status==='On Hold'?'selected':''}>On Hold</option>
                             </select></td></tr>
-                        <tr><td><textarea maxlength="1000" placeholder="Add comment..." onblur="updateTaskComment('${t.id}', this.value)">${t.memberComment || ''}</textarea></td></tr>
-                        <tr><td>Completion Date: <input type="date" value="${t.completionDate || ''}" onchange="updateTaskCompletion('${t.id}', this.value)"></td></tr>
+                        <tr><td><textarea id="comm-${t.id}" maxlength="1000" placeholder="Add comment..." ${disabledAttr}>${t.memberComment || ''}</textarea></td></tr>
+                        <tr><td>Completion Date: <input type="date" id="cdate-${t.id}" value="${t.completionDate || ''}" min="${minDate}" ${disabledAttr}></td></tr>
+                        ${!isDone ? `<tr><td><button onclick="submitTaskUpdate('${t.id}')" style="width: 100%;">Update Task</button></td></tr>` : `<tr><td style="text-align: center;"><strong style="color: #10b981;">🔒 Task Completed & Locked</strong></td></tr>`}
                     </table>
                 </div>`;
             });
@@ -860,9 +863,32 @@
             document.getElementById('m-stat-hold').innerText = s.hold;
         }
 
-        window.updateTaskStatus = (id, s) => updateDoc(doc(db, "tasks", id), { status: s });
-        window.updateTaskComment = (id, c) => updateDoc(doc(db, "tasks", id), { memberComment: c });
-        window.updateTaskCompletion = (id, d) => updateDoc(doc(db, "tasks", id), { completionDate: d });
+        window.submitTaskUpdate = async (tid) => {
+            const stat = document.getElementById(`stat-${tid}`).value;
+            const comm = document.getElementById(`comm-${tid}`).value;
+            const cdate = document.getElementById(`cdate-${tid}`).value;
+            
+            const tDoc = await getDoc(doc(db, "tasks", tid));
+            const t = tDoc.data();
+
+            if (stat === 'Done' && !cdate) return alert("To mark this task as Done, you must provide a Completion Date.");
+
+            await updateDoc(doc(db, "tasks", tid), { status: stat, memberComment: comm, completionDate: cdate });
+
+            try {
+                let msg = `${t.assignedToName} updated task "${t.description}" to ${stat}.`;
+                if (comm) msg += ` Message: "${comm}"`;
+                
+                await addDoc(collection(db, "notifications"), {
+                    forEmail: t.adminEmail,
+                    fromEmail: auth.currentUser.email,
+                    message: msg,
+                    timestamp: Date.now(), read: false, bookmarked: false
+                });
+            } catch(e) {}
+
+            alert("Task successfully updated!");
+        };
 
         window.updateMemberProfile = async () => {
             await updateDoc(doc(db, "users", auth.currentUser.email), { 
@@ -875,19 +901,43 @@
         };
 
         function loadMemberNotifications(email) {
-            onSnapshot(query(collection(db, "notifications"), where("forEmail", "==", email), orderBy("timestamp", "desc")), (snap) => {
+            onSnapshot(query(collection(db, "notifications"), where("forEmail", "==", email)), (snap) => {
                 const tb = document.getElementById('member-notif-table-body'); tb.innerHTML = '';
-                snap.docs.forEach(d => {
-                    const n = d.data();
-                    tb.innerHTML += `<tr><td>${n.message}</td><td><button onclick="toggleBookmark('${d.id}', ${n.bookmarked})">${n.bookmarked ? '⭐' : '☆'}</button></td></tr>`;
+                let docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                docs.sort((a, b) => b.timestamp - a.timestamp); 
+                docs.slice(0, 100).forEach(n => {
+                    tb.innerHTML += `<tr style="background:${n.read?'transparent':'rgba(37,99,235,0.05)'}"><td>${n.message}<br><small style="color:#64748b">${new Date(n.timestamp).toLocaleString()}</small></td><td><button onclick="toggleBookmark('${n.id}', ${n.bookmarked})">${n.bookmarked ? '⭐' : '☆'}</button></td></tr>`;
                 });
             });
         }
+        
         window.navToMember = (id) => {
             document.querySelectorAll('.m-page').forEach(p => p.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         };
+        
         window.toggleBookmark = (id, cur) => updateDoc(doc(db, "notifications", id), { bookmarked: !cur });
+        
+        window.markAllAdminNotificationsRead = async () => {
+            const snap = await getDocs(query(collection(db, "notifications"), where("forEmail", "==", auth.currentUser.email), where("read", "==", false)));
+            snap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
+        };
+        window.deleteAdminNotifications = async () => {
+            if(confirm("Delete all alerts except pins?")) {
+                const snap = await getDocs(query(collection(db, "notifications"), where("forEmail", "==", auth.currentUser.email), where("bookmarked", "==", false)));
+                snap.forEach(d => deleteDoc(doc(db, "notifications", d.id)));
+            }
+        };
+        window.markAllMemberNotificationsRead = async () => {
+            const snap = await getDocs(query(collection(db, "notifications"), where("forEmail", "==", auth.currentUser.email), where("read", "==", false)));
+            snap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
+        };
+        window.deleteMemberNotifications = async () => {
+            if(confirm("Delete all alerts except pins?")) {
+                const snap = await getDocs(query(collection(db, "notifications"), where("forEmail", "==", auth.currentUser.email), where("bookmarked", "==", false)));
+                snap.forEach(d => deleteDoc(doc(db, "notifications", d.id)));
+            }
+        };
     </script>
 </body>
 </html>
