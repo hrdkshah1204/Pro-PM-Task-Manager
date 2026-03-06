@@ -136,20 +136,24 @@
                     🔔 Notifications
                     <span id="admin-notif-dot" class="hidden" style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; border: 2px solid var(--surface);"></span>
                 </button>
-                <button class="quick-btn" onclick="navTo('sub7')">⚙️ Settings</button>
+		<button class="quick-btn" onclick="navTo('sub7')">👤 Profile</button>
                 <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
             </div>
             <div class="main-content">
                 <div id="sub1" class="sub-page">
-                    <h3>Create New Project</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Create New Project</h3>
+                        <button class="outline" onclick="alert('Templates coming soon')">📑 Templates</button>
+                    </div>
                     <div class="form-row">
-                        <div class="form-group" style="flex: 2;"><label>Project Name</label><input type="text" id="p-name"></div>
+                        <div class="form-group" style="flex: 2;"><label>Project Name</label><input type="text" id="p-name" placeholder="Project Name"></div>
                         <div class="form-group"><label>End Date</label><input type="date" id="p-date"></div>
                     </div>
-                    <div class="form-group"><label>Description</label><input type="text" id="p-desc"></div>
+                    <div class="form-group"><label>Description</label><input type="text" id="p-desc" placeholder="Project Description"></div>
                     <input type="hidden" id="edit-project-id">
-                    <button id="btn-save-project" onclick="saveProject()">Save Project</button>
-                    <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left:10px">Cancel</button>
+                    <button id="btn-save-project" onclick="saveProject()" style="margin-top:10px">Save Project</button>
+                    <button id="btn-cancel-edit" class="outline hidden" onclick="cancelEdit()" style="margin-left:10px; margin-top:10px">Cancel</button>
+                    
                     <h3 style="margin-top: 30px;">Active Projects</h3>
                     <table>
                         <thead><tr><th>Project Name</th><th>End Date</th><th>Description</th><th>Actions</th></tr></thead>
@@ -259,7 +263,7 @@
                         <h3>Workspace Settings</h3>
                         <div style="text-align: right;">
                             <div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Subscription: <strong>Free</strong></div>
-                            <button style="padding: 6px 12px; font-size: 12px;">Upgrade to Pro</button>
+                            <button onclick="alert('Coming Soon')" style="padding: 6px 12px; font-size: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer;">Upgrade to Pro</button>
                         </div>
                     </div>
                     <div style="background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid var(--border);">
