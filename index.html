@@ -311,6 +311,7 @@
         </div>
         <div class="view-container">
             <div class="top-quick-access">
+                <button class="quick-btn" onclick="navToMember('m-sub4')" title="Task History">📜 History</button>
                 <button class="quick-btn" onclick="navToMember('m-sub3')" title="Notifications" style="position: relative;">
                     🔔 Alerts
                     <span id="member-notif-dot" class="hidden" style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; border: 2px solid var(--surface);"></span>
@@ -364,6 +365,13 @@
                     </div>
                     <table style="margin-top: 20px;"><thead><tr><th>Message</th><th style="width: 80px;">Pin</th></tr></thead><tbody id="member-notif-table-body"></tbody></table>
                 </div>
+
+                <div id="m-sub4" class="m-page hidden">
+                    <h3>My Task History</h3>
+                    <p style="color: #64748b; font-size: 14px; margin-top: 5px;">Your completed tasks are safely archived here.</p>
+                    <div class="task-grid" id="m-history-grid" style="margin-top: 20px;"></div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -559,7 +567,6 @@
             loadTasksTable();
         };
 
-        // FIXED: Sub Page 2 Task Table rendering correctly formatted sub-tables
         window.loadTasksTable = async () => {
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
@@ -605,7 +612,6 @@
             });
         };
 
-        // FIXED: Replaced CSS toggle with strict inline display toggle to guarantee it stays hidden until clicked
         window.toggleTaskRow = (id, e) => { 
             const row = document.getElementById(`details-${id}`); 
             if (row.style.display === 'none' || row.style.display === '') {
@@ -859,7 +865,7 @@
             });
         }
 
-        // --- MEMBER CORE MODULES (PHASE 1 & 2 UPDATES) ---
+        // --- MEMBER CORE MODULES (PHASE 3: TASK HISTORY SEPARATION) ---
         async function initMemberDashboard(email, data) {
             document.getElementById('member-view').classList.remove('hidden');
             document.getElementById('m-side-name').innerText = data.name || "";
@@ -900,25 +906,35 @@
             }
         }
 
+        // PHASE 3 RENDER LOGIC: Splits Active and Completed Tasks
         function renderMemberTasks(tasks, pMap) {
             const grid = document.getElementById('m-task-grid'); grid.innerHTML = '';
+            const historyGrid = document.getElementById('m-history-grid'); historyGrid.innerHTML = '';
+            
             let s = { total: tasks.length, done: 0, wip: 0, todo: 0, hold: 0 };
             
-            const tasksByProject = {};
+            const activeTasksByProject = {};
+            const doneTasksByProject = {};
+
             tasks.forEach(t => {
                 const isDone = (t.status === 'Done' || t.status === 'completed');
-                if(isDone) s.done++;
-                else if(t.status==='WIP'||t.status==='in-progress') s.wip++;
-                else if(t.status==='To Do'||t.status==='to-do'||t.status==='assigned') s.todo++;
-                else if(t.status==='On Hold') s.hold++;
-
-                if(!tasksByProject[t.projectId]) tasksByProject[t.projectId] = [];
-                tasksByProject[t.projectId].push(t);
+                if(isDone) {
+                    s.done++;
+                    if(!doneTasksByProject[t.projectId]) doneTasksByProject[t.projectId] = [];
+                    doneTasksByProject[t.projectId].push(t);
+                } else {
+                    if(t.status==='WIP'||t.status==='in-progress') s.wip++;
+                    else if(t.status==='To Do'||t.status==='to-do'||t.status==='assigned') s.todo++;
+                    else if(t.status==='On Hold') s.hold++;
+                    
+                    if(!activeTasksByProject[t.projectId]) activeTasksByProject[t.projectId] = [];
+                    activeTasksByProject[t.projectId].push(t);
+                }
             });
 
-            for (const [pid, pTasks] of Object.entries(tasksByProject)) {
+            // 1. RENDER ACTIVE TASKS (Dashboard)
+            for (const [pid, pTasks] of Object.entries(activeTasksByProject)) {
                 const projectData = pMap[pid] || { name: 'Unknown Project', description: 'No project details available.' };
-                
                 let projectHTML = `
                 <div class="project-card" style="grid-column: 1 / -1;">
                     <div class="project-header" style="flex-direction: column; align-items: flex-start; gap: 5px;">
@@ -928,9 +944,7 @@
                     <table class="card-table">`;
 
                 pTasks.forEach(t => {
-                    const isDone = (t.status === 'Done' || t.status === 'completed');
-                    const overdueFlag = (t.targetDate && t.targetDate < new Date().toISOString().split('T')[0] && !isDone) ? `<span class="overdue-badge">OVERDUE</span>` : '';
-                    const disabledAttr = isDone ? 'disabled' : '';
+                    const overdueFlag = (t.targetDate && t.targetDate < new Date().toISOString().split('T')[0]) ? `<span class="overdue-badge">OVERDUE</span>` : '';
                     const minDate = t.assignedAt || ''; 
 
                     let historyList = t.commentHistory || [];
@@ -959,7 +973,7 @@
                         <tr>
                             <td style="width: 50%;"><strong>Target:</strong> ${t.targetDate || 'N/A'} | <strong>By:</strong> ${t.assignedByName || 'Admin'}</td>
                             <td><strong>Status:</strong> 
-                                <select id="stat-${t.id}" ${disabledAttr}>
+                                <select id="stat-${t.id}">
                                     <option value="assigned" ${t.status==='assigned'?'selected':''}>Assigned</option>
                                     <option value="To Do" ${t.status==='To Do'||t.status==='to-do'?'selected':''}>To Do</option>
                                     <option value="WIP" ${t.status==='WIP'||t.status==='in-progress'?'selected':''}>WIP</option>
@@ -973,24 +987,77 @@
                                 ${historyHTML}
                                 <div style="display: flex; gap: 15px; align-items: flex-start;">
                                     <div style="flex: 2;">
-                                        <textarea id="comm-${t.id}" rows="2" maxlength="1000" placeholder="Add a new update note..." ${disabledAttr} style="width: 100%;"></textarea>
+                                        <textarea id="comm-${t.id}" rows="2" maxlength="1000" placeholder="Add a new update note..." style="width: 100%;"></textarea>
                                     </div>
                                     <div style="flex: 1;">
                                         <label style="font-size: 11px; font-weight: bold; color: #64748b;">COMPLETION DATE</label><br>
-                                        <input type="date" id="cdate-${t.id}" value="${t.completionDate || ''}" min="${minDate}" ${disabledAttr} style="margin-top: 5px; width: 100%;">
+                                        <input type="date" id="cdate-${t.id}" value="${t.completionDate || ''}" min="${minDate}" style="margin-top: 5px; width: 100%;">
                                     </div>
                                 </div>
                             </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="border-bottom: 3px solid var(--primary);">
-                                ${!isDone ? `<button onclick="submitTaskUpdate('${t.id}')" style="width: 100%;">Update Task</button>` : `<div style="text-align: center; color: #10b981; font-weight: bold; padding: 10px 0;">🔒 Task Completed</div>`}
+                                <button onclick="submitTaskUpdate('${t.id}')" style="width: 100%;">Update Task</button>
+                            </td>
+                        </tr>`;
+                });
+                projectHTML += `</table></div>`;
+                grid.innerHTML += projectHTML;
+            }
+
+            // 2. RENDER DONE TASKS (Task History Page)
+            for (const [pid, pTasks] of Object.entries(doneTasksByProject)) {
+                const projectData = pMap[pid] || { name: 'Unknown Project', description: 'No project details available.' };
+                let historyProjectHTML = `
+                <div class="project-card" style="grid-column: 1 / -1; opacity: 0.85;">
+                    <div class="project-header" style="flex-direction: column; align-items: flex-start; gap: 5px; background: #64748b;">
+                        <div style="font-size: 16px;">${projectData.name} (Completed)</div>
+                    </div>
+                    <table class="card-table">`;
+
+                pTasks.forEach(t => {
+                    let historyList = t.commentHistory || [];
+                    if (historyList.length === 0 && t.memberComment) {
+                        historyList = [{ date: "Legacy Note", text: t.memberComment }]; 
+                    }
+                    
+                    let historyHTML = '';
+                    if (historyList.length > 0) {
+                        historyHTML = `<div style="background: var(--bg); padding: 10px; border-radius: 6px; margin-top: 10px; max-height: 120px; overflow-y: auto; border: 1px solid var(--border);">
+                            <strong style="font-size: 12px; color: #64748b;">UPDATE HISTORY</strong>
+                            ${historyList.map(c => `<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 13px;">
+                                <span style="color: var(--primary); font-size: 11px; font-weight: bold;">${c.date}</span><br>
+                                ${c.text}
+                            </div>`).join('')}
+                        </div>`;
+                    } else {
+                        historyHTML = `<div style="font-size: 12px; color: #64748b; margin-top: 10px;">No update history recorded.</div>`;
+                    }
+
+                    historyProjectHTML += `
+                        <tr style="background: rgba(0, 0, 0, 0.02);">
+                            <td colspan="2">
+                                <strong>Task Name:</strong> ${t.description}<br>
+                                <div style="color: #64748b; font-size: 12px; margin-top: 4px;"><strong>Instructions:</strong> ${t.taskDetails || 'None'}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><strong>Status:</strong> <span style="color: #10b981; font-weight: bold;">${t.status}</span></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Target Date:</strong> ${t.targetDate || 'N/A'}</td>
+                            <td><strong>Completed On:</strong> ${t.completionDate || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border-bottom: 3px solid #64748b;">
+                                ${historyHTML}
                             </td>
                         </tr>`;
                 });
 
-                projectHTML += `</table></div>`;
-                grid.innerHTML += projectHTML;
+                historyProjectHTML += `</table></div>`;
+                historyGrid.innerHTML += historyProjectHTML;
             }
 
             document.getElementById('m-stat-total').innerText = s.total;
