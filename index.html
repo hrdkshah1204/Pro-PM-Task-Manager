@@ -502,7 +502,6 @@
             cancelEdit(); loadProjectsTable();
         };
 
-        // UPDATED: Now uses description text instead of a dropdown for project status in the table
         window.loadProjectsTable = async () => {
             const q = query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
@@ -591,6 +590,7 @@
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
 
+        // FIXED: The email variable is explicitly saved in the document to prevent dropdown crashes
         window.saveMember = async () => {
             const adminEmail = auth.currentUser.email;
             const email = document.getElementById('m-email').value.toLowerCase().trim();
@@ -615,6 +615,7 @@
 
                     await setDoc(doc(db, "users", email), {
                         name: name, 
+                        email: email, 
                         phone: phone, 
                         teamId: tid, 
                         teamName: tname, 
@@ -627,6 +628,7 @@
                 } else {
                     await updateDoc(doc(db, "users", email), {
                         name: name,
+                        email: email, 
                         phone: phone,
                         teamId: tid,
                         teamName: tname
@@ -685,10 +687,15 @@
             const dd = document.getElementById('assign-project-select'); dd.innerHTML = '<option value="">-- Project --</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
+
+        // FIXED: Maps email correctly even if the database field is missing for older users
         window.fetchTeamsAndMembers = async () => {
-            const [tSnap, mSnap] = await Promise.all([getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email))), getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", auth.currentUser.email)))]);
+            const [tSnap, mSnap] = await Promise.all([
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email))), 
+                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", auth.currentUser.email)))
+            ]);
             window.workspaceTeams = tSnap.docs.map(d => ({id: d.id, ...d.data()}));
-            window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
+            window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, email: d.id, ...d.data()}));
         };
 
         window.loadAssignmentTable = async () => {
@@ -718,16 +725,17 @@
         
         window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = '<option value="">-- Select Member --</option>' + window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         
+        // FIXED: Alert safety nets catch dropdown errors instead of crashing
         window.assignSpecificTask = async (tid) => {
             try {
                 const email = document.getElementById(`m-${tid}`).value;
                 const tId = document.getElementById(`t-${tid}`).value;
                 
                 if (!tId) return alert("Please select a Team first.");
-                if (!email) return alert("Please select a Member from the team dropdown.");
+                if (!email || email === "undefined") return alert("Please select a Member from the team dropdown.");
 
-                const member = window.workspaceMembers.find(m => m.email === email);
-                if (!member) return alert("Error: Member details not found.");
+                const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
+                if (!member) return alert("System Error: Member data mapping failed.");
 
                 const adminName = document.querySelector('.user-name').innerText;
                 const teamSelect = document.getElementById(`t-${tid}`);
