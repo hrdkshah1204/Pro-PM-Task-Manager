@@ -137,7 +137,7 @@
                     <span id="admin-notif-dot" class="hidden" style="position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; border: 2px solid var(--surface);"></span>
                 </button>
 		<button class="quick-btn" onclick="navTo('sub7')">👤 Profile</button>
-                <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
+                <button class="quick-btn" onclick="signOutUser()">➜] Logout</button>
             </div>
             <div class="main-content">
                 <div id="sub1" class="sub-page">
@@ -390,7 +390,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-	import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+	import { getAnalytics, logEvent, setUserProperties } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, deleteDoc, updateDoc, query, orderBy, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         
@@ -493,7 +494,9 @@
         });
 
         window.completeOnboarding = async () => {
-    await setDoc(doc(db, "users", auth.currentUser.email), { 
+	await logEvent(analytics, 'onboarding_complete');
+	setUserProperties(analytics, { user_cohort: 'onboarded_only' });
+	await setDoc(doc(db, "users", auth.currentUser.email), { 
         name: document.getElementById('ob-name').value, 
         workspaceName: document.getElementById('ob-workspace-name').value,
         company: document.getElementById('ob-company').value, 
@@ -526,44 +529,44 @@
         };
 
         window.saveProject = async () => {
-            const user = auth.currentUser;
-            const name = document.getElementById('p-name').value.trim();
-            const date = document.getElementById('p-date').value;
-            const desc = document.getElementById('p-desc').value.trim();
-            const editId = document.getElementById('edit-project-id').value;
+    const user = auth.currentUser; // Define user first!
+    const name = document.getElementById('p-name').value.trim();
+    const date = document.getElementById('p-date').value;
+    const desc = document.getElementById('p-desc').value.trim();
+    const editId = document.getElementById('edit-project-id').value;
 
-            if(!name || !date || !desc) return alert("All fields are required!");
+    if (!name || !date || !desc) return alert("All fields are required!");
 
-            if(!editId) {
-                const countSnap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
-                if(countSnap.size >= 20) return alert("Limit Reached: Max 20 projects allowed.");
-                const dupCheck = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name)));
-                if(!dupCheck.empty) return alert("A project with this exact name already exists.");
+    try {
+        if (!editId) {
+            const countSnap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
+            
+            // Check if this is the VERY FIRST project
+            if (countSnap.empty) {
+                logEvent(analytics, 'ttv_project_created', {
+                    seconds_since_signup: Math.floor((Date.now() - user.metadata.createdAt) / 1000)
+                });
+                // Update cohort to indicate they've started building
+                setUserProperties(analytics, { user_cohort: 'active_builder' });
             }
 
-            const data = { name, endDate: date, description: desc, createdBy: user.email, status: 'active' };
-            if(editId) await updateDoc(doc(db, "projects", editId), data);
-            else { data.createdAt = new Date().toISOString(); await addDoc(collection(db, "projects"), data); }
-            cancelEdit(); loadProjectsTable();
-logEvent(analytics, 'project_created');
-        };
-
-        window.loadProjectsTable = async () => {
-            const q = query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email), orderBy("createdAt", "desc"));
-            const snap = await getDocs(q);
-            const tbody = document.getElementById('project-table-body'); tbody.innerHTML = '';
-            snap.forEach(d => {
-                const p = d.data();
-                tbody.innerHTML += `<tr>
-                    <td>${p.name}</td><td>${p.endDate}</td><td>${p.description || 'N/A'}</td>
-                    <td class="action-btns">
-                        <button class="outline" onclick="openTaskEntry('${d.id}')">+ Tasks</button>
-                        <button onclick="editProject('${d.id}')">Edit</button>
-                        <button class="danger" onclick="deleteProject('${d.id}')">Del</button>
-                    </td>
-                </tr>`;
+            if (countSnap.size >= 20) return alert("Limit Reached.");
+            
+            await addDoc(collection(db, "projects"), { 
+                name, endDate: date, description: desc, createdBy: user.email, 
+                status: 'active', createdAt: new Date().toISOString() 
             });
-        };
+        } else {
+            await updateDoc(doc(db, "projects", editId), { name, endDate: date, description: desc });
+        }
+
+        logEvent(analytics, 'project_created');
+        cancelEdit(); 
+        loadProjectsTable();
+    } catch (e) {
+        alert("Project save failed.");
+    }
+};
 
         // This helper function opens Sub Page 2 and auto-selects the project
         window.openTaskEntry = (pid) => {
@@ -588,19 +591,40 @@ logEvent(analytics, 'project_created');
         };
         
 	window.saveTask = async () => {
-            const pid = document.getElementById('t-project-id').value;
-            const tdesc = document.getElementById('t-desc').value.trim();
-            const tdetails = document.getElementById('t-details').value.trim();
-            if(!pid || !tdesc) return alert("Project selection and Task Name are required.");
-            const taskSnap = await getDocs(query(collection(db, "tasks"), where("projectId", "==", pid)));
-            if(taskSnap.size >= 10) return alert("Limit: 10 tasks/project.");
-            await addDoc(collection(db, "tasks"), {
-                projectId: pid, description: tdesc, taskDetails: tdetails, status: "To Do", adminEmail: auth.currentUser.email
+    const user = auth.currentUser;
+    const pid = document.getElementById('t-project-id').value;
+    const tdesc = document.getElementById('t-desc').value.trim();
+    const tdetails = document.getElementById('t-details').value.trim();
+    
+    if(!pid || !tdesc) return alert("Project selection and Task Name are required.");
+
+    try {
+        const taskSnap = await getDocs(query(collection(db, "tasks"), where("adminEmail", "==", user.email)));
+        
+        // --- ANALYTICS START ---
+        if (taskSnap.empty) {
+            logEvent(analytics, 'ttv_task_created', {
+                seconds_since_signup: Math.floor((Date.now() - user.metadata.createdAt) / 1000)
             });
-            document.getElementById('t-desc').value = ''; document.getElementById('t-details').value = ''; 
-            loadTasksTable();
-	logEvent(analytics, 'task_created');
-        };
+            setUserProperties(analytics, { user_cohort: 'active_builder' });
+        }
+        // --- ANALYTICS END ---
+
+        if(taskSnap.size >= 100) return alert("Limit: 100 tasks per workspace."); // Global task limit
+
+        await addDoc(collection(db, "tasks"), {
+            projectId: pid, description: tdesc, taskDetails: tdetails, 
+            status: "To Do", adminEmail: user.email
+        });
+
+        logEvent(analytics, 'task_created');
+        document.getElementById('t-desc').value = ''; 
+        document.getElementById('t-details').value = ''; 
+        loadTasksTable();
+    } catch (e) {
+        alert("Task save failed.");
+    }
+};
 
         // --- THE MISSING LINE WAS ADDED BELOW ---
         window.loadTasksTable = async () => { 
@@ -663,46 +687,39 @@ logEvent(analytics, 'project_created');
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
         window.saveTeam = async () => {
+            const user = auth.currentUser;
             const editId = document.getElementById('edit-team-id').value;
-            if(!editId) {
-                const teamSnap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", auth.currentUser.email)));
-                if(teamSnap.size >= 5) return alert("Limit: 5 Teams.");
-                await addDoc(collection(db, "teams"), {name: document.getElementById('team-name').value, createdBy: auth.currentUser.email});
-            } else { await updateDoc(doc(db, "teams", editId), {name: document.getElementById('team-name').value}); }
-            document.getElementById('team-name').value = ''; loadTeamsTable();
-logEvent(analytics, 'team_created');
-        };
-       
-window.loadTeamsTable = async () => {
-            const adminEmail = auth.currentUser.email;
-            
-            // Fetch both teams AND members at the same time for efficiency
-            const [teamsSnap, membersSnap] = await Promise.all([
-                getDocs(query(collection(db, "teams"), where("createdBy", "==", adminEmail))),
-                getDocs(query(collection(db, "users"), where("adminEmail", "==", adminEmail)))
-            ]);
-            
-            const tbody = document.getElementById('team-table-body'); 
-            tbody.innerHTML = '';
-            
-            teamsSnap.forEach(d => {
-                // Count how many members share this specific team's ID
-                const memberCount = membersSnap.docs.filter(m => m.data().teamId === d.id).length;
-                
-                tbody.innerHTML += `<tr>
-                    <td style="vertical-align: middle; font-weight: 500;">${d.data().name}</td>
-                    <td style="text-align: center; vertical-align: middle; font-weight: 600; color: #64748b;">${memberCount} / 10</td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button class="outline" onclick="navTo('sub4')" style="width: 100%; padding: 8px;">+ Members</button>
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button onclick="editTeam('${d.id}')" style="width: 100%; padding: 8px;">Edit</button>
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button class="danger" onclick="deleteTeam('${d.id}')" style="width: 100%; padding: 8px;">Del</button>
-                    </td>
-                </tr>`;
-            });
+            const tName = document.getElementById('team-name').value.trim();
+
+            // FATAL ERROR FIX: This stops the function if the name is empty or just spaces
+            if (!tName) {
+                alert("Please enter a valid Team Name.");
+                return; 
+            }
+
+            try {
+                if(!editId) {
+                    const teamSnap = await getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email)));
+                    
+                    // Analytics tracking for Cohort 3 pathway
+                    if (teamSnap.empty) {
+                        await logEvent(analytics, 'ttv_team_created', {
+                            seconds_since_signup: Math.floor((Date.now() - user.metadata.createdAt) / 1000)
+                        });
+                    }
+
+                    if(teamSnap.size >= 5) return alert("Limit: 5 Teams.");
+                    await addDoc(collection(db, "teams"), { name: tName, createdBy: user.email });
+                } else { 
+                    await updateDoc(doc(db, "teams", editId), { name: tName }); 
+                }
+
+                logEvent(analytics, 'team_created');
+                document.getElementById('team-name').value = ''; 
+                loadTeamsTable();
+            } catch (e) {
+                alert("Team save failed. Please check your connection.");
+            }
         };
 
         window.editTeam = async (id) => { 
@@ -720,42 +737,47 @@ window.loadTeamsTable = async () => {
         };
 
         window.saveMember = async () => {
-            const adminEmail = auth.currentUser.email;
-            const email = document.getElementById('m-email').value.toLowerCase().trim();
-            const tid = document.getElementById('m-team-id').value;
-            const name = document.getElementById('m-name').value.trim();
-            const phone = document.getElementById('m-phone').value.trim();
-            const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
-            const editId = document.getElementById('edit-member-id').value;
+    const adminEmail = auth.currentUser.email;
+    const email = document.getElementById('m-email').value.toLowerCase().trim();
+    const tid = document.getElementById('m-team-id').value;
+    const name = document.getElementById('m-name').value.trim();
+    const phone = document.getElementById('m-phone').value.trim();
+    const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
+    const editId = document.getElementById('edit-member-id').value;
 
-            if(!email || !tid || !name) return alert("Name, Email, and Team are required.");
+    if (!email || !tid || !name) return alert("Name, Email, and Team are required.");
 
-            try {
-                if(!editId) {
-                    const memSnap = await getDocs(query(collection(db, "users"), where("teamId", "==", tid)));
-                    if(memSnap.size >= 10) return alert("Limit: 10 Members per team.");
+    try {
+        if (!editId) {
+            const memSnap = await getDocs(query(collection(db, "users"), where("teamId", "==", tid)));
+            if (memSnap.size >= 10) return alert("Limit: 10 Members per team.");
 
-                    const randomPassword = Math.random().toString(36).slice(-8);
-                    const newCred = await createUserWithEmailAndPassword(secondaryAuth, email, randomPassword);
-                    await sendEmailVerification(newCred.user);
-                    await signOut(secondaryAuth);
+            const randomPassword = Math.random().toString(36).slice(-8);
+            const newCred = await createUserWithEmailAndPassword(secondaryAuth, email, randomPassword);
+            await sendEmailVerification(newCred.user);
+            await signOut(secondaryAuth);
 
-                    await setDoc(doc(db, "users", email), {
-                        name: name, email: email, phone: phone, teamId: tid, teamName: tname, 
-                        role: 'member', adminEmail: adminEmail, company: document.getElementById('display-org-name').innerText
-                    });
+            await setDoc(doc(db, "users", email), {
+                name: name, email: email, phone: phone, teamId: tid, teamName: tname,
+                role: 'member', adminEmail: adminEmail, company: document.getElementById('display-org-name').innerText
+            });
 
-                    alert(`Member created!\n\nEmail: ${email}\nPassword: ${randomPassword}\n\nPlease copy this password and share it securely. The user has been emailed a verification link.`);
-                } else {
-                    await updateDoc(doc(db, "users", email), { name: name, email: email, phone: phone, teamId: tid, teamName: tname });
-                    alert("Member details updated.");
-                }
-                cancelMemberEdit();
-                loadMembersTable();
-            } catch (error) {
-                alert("Error saving member: " + error.message);
-            }
-        };
+            // LOG SUCCESS HERE
+            logEvent(analytics, 'first_member_added');
+            setUserProperties(analytics, { user_cohort: 'team_manager' });
+
+            alert(`Member created!\n\nEmail: ${email}\nPassword: ${randomPassword}`);
+        } else {
+            await updateDoc(doc(db, "users", email), { name: name, email: email, phone: phone, teamId: tid, teamName: tname });
+            alert("Member details updated.");
+        }
+        cancelMemberEdit();
+        loadMembersTable();
+    } catch (error) {
+        alert("Error saving member: " + error.message);
+    }
+}; // The closing brace must be AFTER the logic
+
 
         window.editMember = async (email) => {
             const d = await getDoc(doc(db, "users", email));
@@ -890,40 +912,33 @@ window.loadTeamsTable = async () => {
         window.updateRowMembers = (tid) => document.getElementById(`m-${tid}`).innerHTML = '<option value="">-- Select Member --</option>' + window.workspaceMembers.filter(m => m.teamId === document.getElementById(`t-${tid}`).value).map(m => `<option value="${m.email}">${m.name}</option>`).join('');
         
         window.assignSpecificTask = async (tid) => {
-            try {
-                const email = document.getElementById(`m-${tid}`).value;
-                const tId = document.getElementById(`t-${tid}`).value;
-                const targetDate = document.getElementById(`date-${tid}`).value;
-                
-                if (!tId) return alert("Please select a Team first.");
-                if (!email || email === "undefined") return alert("Please select a Member from the team dropdown.");
-                if (!targetDate) return alert("Please set a Target Date for completion.");
+    try {
+        const email = document.getElementById(`m-${tid}`).value;
+        const tId = document.getElementById(`t-${tid}`).value;
+        const targetDate = document.getElementById(`date-${tid}`).value;
 
-                const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
-                if (!member) return alert("System Error: Member data mapping failed.");
+        if (!tId) return alert("Please select a Team first.");
+        if (!email || email === "undefined") return alert("Please select a Member.");
+        if (!targetDate) return alert("Please set a Target Date.");
 
-                const adminName = document.querySelector('.user-name').innerText;
-                const teamSelect = document.getElementById(`t-${tid}`);
-                const teamName = teamSelect.options[teamSelect.selectedIndex].text;
-                const assignedAtDate = new Date().toISOString().split('T')[0];
+        const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
+        if (!member) return alert("System Error: Member data mapping failed.");
 
-                await updateDoc(doc(db, "tasks", tid), { 
-                    assignedToEmail: email, assignedToName: member.name, assignedTeamId: tId, 
-                    assignedTeamName: teamName, assignedByName: adminName, status: 'assigned',
-                    targetDate: targetDate, assignedAt: assignedAtDate, assignedTimestamp: Date.now()
-                });
+        await updateDoc(doc(db, "tasks", tid), {
+            assignedToEmail: email, assignedToName: member.name, 
+            status: 'assigned', targetDate: targetDate, assignedTimestamp: Date.now()
+        });
 
-                try {
-                    await addDoc(collection(db, "notifications"), { forEmail: email, fromEmail: auth.currentUser.email, message: `New task assigned: Target Date ${targetDate}.`, timestamp: Date.now(), read: false, bookmarked: false });
-                } catch(ne) {}
-
-                alert("Task assigned with Target Date!");
-                loadAssignmentTable();
-            } catch (error) {
-                alert("Assignment failed: " + error.message);
-            }
-        };
-        window.manualStatusUpdate = async (tid, s) => await updateDoc(doc(db, "tasks", tid), { status: s });
+        // LOG SUCCESS HERE
+        
+        alert("Task assigned with Target Date!!");
+	logEvent(analytics, 'first_task_assigned');
+        setUserProperties(analytics, { user_cohort: 'power_user' });        
+	loadAssignmentTable();
+    } catch (error) {
+        alert("Assignment failed: " + error.message);
+    }
+};
 
         window.runAnalytics = async () => {
             const user = auth.currentUser;
