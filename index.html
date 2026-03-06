@@ -52,7 +52,6 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: rgba(0,0,0,0.03); font-weight: 600; color: var(--text); font-size: 14px; }
-        .action-btns { display: flex; gap: 8px; }
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-group { flex: 1; }
         .form-group label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; }
@@ -191,7 +190,7 @@
                             <button id="btn-cancel-member" class="outline hidden" onclick="cancelMemberEdit()">Cancel</button>
                         </div>
                     </div>
-                    <table><thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead><tbody id="member-table-body"></tbody></table>
+                    <table><thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Actions</th></tr></thead><tbody id="member-table-body"></tbody></table>
                 </div>
 
                 <div id="sub5" class="sub-page hidden">
@@ -290,8 +289,8 @@
         </div>
         <div class="view-container">
             <div class="top-quick-access">
-                <button class="quick-btn" onclick="navToMember('m-sub1')">🏠 Home</button>
-                <button class="quick-btn" onclick="navToMember('m-sub3')">🔔 Notifications</button>
+                <button class="quick-btn" onclick="navToMember('m-sub1')" title="Home">🏠 Home</button>
+                <button class="quick-btn" onclick="navToMember('m-sub3')" title="Notifications">🔔 Alerts</button>
                 <button class="quick-btn" onclick="signOutUser()">🚪 Logout</button>
             </div>
             <div class="main-content">
@@ -365,6 +364,10 @@
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({prompt: 'select_account'});
 
+        // NEW: Secondary App Instance for Secure Background User Creation
+        const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+        const secondaryAuth = getAuth(secondaryApp);
+
         document.documentElement.setAttribute('data-theme', localStorage.getItem('propm-theme') || 'light');
         window.setTheme = (mode) => {
             document.documentElement.setAttribute('data-theme', mode);
@@ -410,7 +413,7 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 if (!user.emailVerified) {
-                    document.getElementById('auth-status').innerText = "Please verify your email before logging in.";
+                    document.getElementById('auth-status').innerText = "Please verify your email before logging in. Check your inbox!";
                     signOut(auth); return;
                 }
                 const userSnap = await getDoc(doc(db, "users", user.email));
@@ -422,6 +425,7 @@
                         document.getElementById('display-org-name').innerText = data.company || "Workspace";
                         document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name);
                         
+                        // Populate Admin Settings fields
                         document.getElementById('set-name').value = data.name || "";
                         document.getElementById('set-email').value = user.email;
                         document.getElementById('set-phone').value = data.phone || "";
@@ -475,7 +479,6 @@
             if(id === 'sub8') loadAdminNotifications();
         };
 
-        // FIXED: Duplicate name check blocks if same name exists for admin, regardless of date.
         window.saveProject = async () => {
             const user = auth.currentUser;
             const name = document.getElementById('p-name').value.trim();
@@ -488,8 +491,7 @@
             if(!editId) {
                 const countSnap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email)));
                 if(countSnap.size >= 20) return alert("Limit Reached: Max 20 projects allowed.");
-                
-                // ONLY checks name so you can't have duplicate project names
+                // FIXED: Duplicate check now properly blocks same name
                 const dupCheck = await getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email), where("name", "==", name)));
                 if(!dupCheck.empty) return alert("A project with this exact name already exists.");
             }
@@ -551,7 +553,6 @@
         window.toggleTaskRow = (id, e) => { const row = document.getElementById(`details-${id}`); const open = row.classList.toggle('open'); e.target.innerText = open ? '▼' : '▶'; };
         window.deleteTask = async (id) => { await deleteDoc(doc(db,"tasks",id)); loadTasksTable(); };
 
-        // FIXED: Added Edit logic and +Members quick link button
         window.saveTeam = async () => {
             const editId = document.getElementById('edit-team-id').value;
             if(!editId) {
@@ -585,49 +586,64 @@
             const dd = document.getElementById('m-team-id'); dd.innerHTML = '<option value="">Select Team</option>';
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
+
+        // NEW: Automated Secure Account Creation (Secondary Auth Hook)
         window.saveMember = async () => {
-            const email = document.getElementById('m-email').value.toLowerCase();
+            const adminEmail = auth.currentUser.email;
+            const email = document.getElementById('m-email').value.toLowerCase().trim();
             const tid = document.getElementById('m-team-id').value;
-            if(!document.getElementById('edit-member-id').value) {
-                const memSnap = await getDocs(query(collection(db, "users"), where("teamId", "==", tid)));
-                if(memSnap.size >= 10) return alert("Limit: 10 Members per team.");
+            const name = document.getElementById('m-name').value.trim();
+            const tname = document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text;
+            const editId = document.getElementById('edit-member-id').value;
+
+            if(!email || !tid || !name) return alert("Name, Email, and Team are required.");
+
+            try {
+                if(!editId) {
+                    const memSnap = await getDocs(query(collection(db, "users"), where("teamId", "==", tid)));
+                    if(memSnap.size >= 10) return alert("Limit: 10 Members per team.");
+
+                    // Generate Random Password
+                    const randomPassword = Math.random().toString(36).slice(-8);
+
+                    // Create User in Background & Send Verification Email
+                    const newCred = await createUserWithEmailAndPassword(secondaryAuth, email, randomPassword);
+                    await sendEmailVerification(newCred.user);
+                    await signOut(secondaryAuth); // Clear background session
+
+                    await setDoc(doc(db, "users", email), {
+                        name: name, 
+                        phone: document.getElementById('m-phone').value, 
+                        teamId: tid, 
+                        teamName: tname, 
+                        role: 'member', 
+                        adminEmail: adminEmail, 
+                        company: document.getElementById('display-org-name').innerText
+                    });
+
+                    alert(`Member created!\n\nEmail: ${email}\nPassword: ${randomPassword}\n\nPlease copy this password and share it with the user. They will also receive an email verification link.`);
+                } else {
+                    await updateDoc(doc(db, "users", email), {
+                        name: name,
+                        phone: document.getElementById('m-phone').value,
+                        teamId: tid,
+                        teamName: tname
+                    });
+                    alert("Member details updated.");
+                }
+                cancelMemberEdit();
+                loadMembersTable();
+            } catch (error) {
+                alert("Error: " + error.message);
             }
-            const memberData = {
-                name: document.getElementById('m-name').value, 
-                phone: document.getElementById('m-phone').value, 
-                teamId: tid, 
-                teamName: document.getElementById('m-team-id').options[document.getElementById('m-team-id').selectedIndex].text, 
-                role: 'member', 
-                adminEmail: auth.currentUser.email, 
-                company: document.getElementById('display-org-name').innerText
-            };
-            await setDoc(doc(db, "users", email), memberData, {merge: true});
-            
-            // Notification trigger
-            if(!document.getElementById('edit-member-id').value) {
-                await addDoc(collection(db, "mail"), {
-                    to: email,
-                    message: {
-                        subject: `Onboarding: Welcome to ${memberData.company}`,
-                        html: `<p>You have been onboarded by ${document.querySelector('.user-name').innerText}. Login at https://pm-pro-80c67.firebaseapp.com</p>`
-                    }
-                });
-                await sendPasswordResetEmail(auth, email);
-            }
-            cancelMemberEdit();
-            loadMembersTable();
         };
 
-        // FIXED: Added Edit logic and Edit Button to Members View
         window.editMember = async (email) => {
             const d = await getDoc(doc(db, "users", email));
             const m = d.data();
-            document.getElementById('m-name').value = m.name;
-            document.getElementById('m-email').value = m.email;
-            document.getElementById('m-email').disabled = true;
-            document.getElementById('m-phone').value = m.phone;
-            document.getElementById('m-team-id').value = m.teamId;
-            document.getElementById('edit-member-id').value = email;
+            document.getElementById('m-name').value = m.name; document.getElementById('m-email').value = email;
+            document.getElementById('m-email').disabled = true; document.getElementById('m-phone').value = m.phone;
+            document.getElementById('m-team-id').value = m.teamId; document.getElementById('edit-member-id').value = email;
             document.getElementById('btn-cancel-member').classList.remove('hidden');
         };
         window.cancelMemberEdit = () => {
@@ -640,7 +656,7 @@
             const snap = await getDocs(query(collection(db, "users"), where("adminEmail", "==", auth.currentUser.email)));
             const tbody = document.getElementById('member-table-body'); tbody.innerHTML = '';
             snap.forEach(d => {
-                tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td><td>${d.data().phone}</td>
+                tbody.innerHTML += `<tr><td>${d.data().name}</td><td>${d.data().teamName}</td><td>${d.id}</td>
                 <td class="action-btns"><button onclick="editMember('${d.id}')">Edit</button><button class="danger" onclick="deleteMember('${d.id}')">Del</button></td></tr>`;
             });
         };
@@ -658,7 +674,6 @@
             window.workspaceMembers = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         };
 
-        // FIXED: Status dropdown logic restored
         window.loadAssignmentTable = async () => {
             const pid = document.getElementById('assign-project-select').value;
             if(!pid) return;
@@ -689,14 +704,14 @@
         };
         window.manualStatusUpdate = async (tid, s) => await updateDoc(doc(db, "tasks", tid), { status: s });
 
-        // FIXED: The missing mSnap array promise added to prevent crash!
+        // FIXED: Re-added mSnap query to prevent promise crash
         window.runAnalytics = async () => {
             const user = auth.currentUser;
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
                 getDocs(query(collection(db, "projects"), where("createdBy", "==", user.email))), 
                 getDocs(collection(db, "tasks")), 
                 getDocs(query(collection(db, "teams"), where("createdBy", "==", user.email))),
-                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email))) // <-- FIXED PROMISE
+                getDocs(query(collection(db, "users"), where("role", "==", "member"), where("adminEmail", "==", user.email)))
             ]);
             
             document.getElementById('stat-projects').innerText = pSnap.size;
@@ -709,7 +724,7 @@
                 const perc = tasks.length > 0 ? Math.round((done/tasks.length)*100) : 0;
                 container.innerHTML += `<div style="background:var(--surface); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${d.data().name}</strong><span>${perc}% Complete</span></div>
-                    <div style="width:100%; background:var(--bg); height:10px; border-radius:5px; overflow:hidden;"><div style="width:${perc}%; background:var(--primary); height:10px;"></div></div>
+                    <div style="width:100%; background:var(--bg); height:10px; border-radius:5px; overflow:hidden;"><div style="width:${perc}%; background:var(--primary); height:10px; transition: width 0.5s ease;"></div></div>
                 </div>`;
             });
             const tBody = document.getElementById('analytics-team-body'); tBody.innerHTML = '';
