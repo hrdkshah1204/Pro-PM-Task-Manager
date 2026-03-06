@@ -462,7 +462,7 @@
                         document.getElementById('set-company').value = data.company || "";
                         document.getElementById('set-size').value = data.teamSize || "1 - 10";
                         document.getElementById('set-address').value = data.companyAddress || "";
-
+			loadAdminNotifications();
                         navTo('sub1');
                     } else if (data.role === 'member') {
                         initMemberDashboard(user.email, data);
@@ -499,7 +499,7 @@
             if(id === 'sub4') { loadTeamDropdownForMembers(); loadMembersTable(); }
             if(id === 'sub5') { loadAssignProjectDropdown(); fetchTeamsAndMembers(); }
             if(id === 'sub6') runAnalytics();
-            if(id === 'sub8') loadAdminNotifications();
+            //if(id === 'sub8') loadAdminNotifications();
         };
 
         window.saveProject = async () => {
