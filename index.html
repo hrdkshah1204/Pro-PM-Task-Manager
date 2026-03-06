@@ -875,32 +875,53 @@
             document.getElementById('m-stat-hold').innerText = s.hold;
         }
 
+        // USER UPDATE BUTTON LOGIC (Req 5 & 6 Fix)
         window.submitTaskUpdate = async (tid) => {
-            const stat = document.getElementById(`stat-${tid}`).value;
-            const comm = document.getElementById(`comm-${tid}`).value;
-            const cdate = document.getElementById(`cdate-${tid}`).value;
-            
-            const tDoc = await getDoc(doc(db, "tasks", tid));
-            const t = tDoc.data();
-
-            if (stat === 'Done' && !cdate) return alert("To mark this task as Done, you must provide a Completion Date.");
-
-            await updateDoc(doc(db, "tasks", tid), { status: stat, memberComment: comm, completionDate: cdate });
-
             try {
-                let msg = `${t.assignedToName} updated task "${t.description}" to ${stat}.`;
+                const stat = document.getElementById(`stat-${tid}`).value;
+                const comm = document.getElementById(`comm-${tid}`).value;
+                const cdate = document.getElementById(`cdate-${tid}`).value;
+                
+                if (stat === 'Done' && !cdate) return alert("To mark this task as Done, you must provide a Completion Date.");
+
+                // 1. Get the current Member's profile to reliably find their Admin's email
+                const userSnap = await getDoc(doc(db, "users", auth.currentUser.email));
+                const memberData = userSnap.data();
+                const actualAdminEmail = memberData.adminEmail;
+
+                // 2. Get the Task details for the notification message
+                const tDoc = await getDoc(doc(db, "tasks", tid));
+                const t = tDoc.data();
+
+                // 3. Save the update to the Database
+                await updateDoc(doc(db, "tasks", tid), { 
+                    status: stat, 
+                    memberComment: comm, 
+                    completionDate: cdate 
+                });
+
+                // 4. Send the reliable Notification
+                let msg = `${t.assignedToName} updated task "${t.description}" to status: ${stat}.`;
                 if (comm) msg += ` Message: "${comm}"`;
                 
                 await addDoc(collection(db, "notifications"), {
-                    forEmail: t.adminEmail,
+                    forEmail: actualAdminEmail, // Reliably routes to the Admin
                     fromEmail: auth.currentUser.email,
                     message: msg,
-                    timestamp: Date.now(), read: false, bookmarked: false
+                    timestamp: Date.now(), 
+                    read: false, 
+                    bookmarked: false
                 });
-            } catch(e) {}
 
-            alert("Task successfully updated!");
+                alert("Task successfully updated!");
+            } catch (error) {
+                console.error("Update failed:", error);
+                alert("Error updating task: " + error.message);
+            }
         };
+
+
+
 
         window.updateMemberProfile = async () => {
             await updateDoc(doc(db, "users", auth.currentUser.email), { 
