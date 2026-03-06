@@ -96,10 +96,6 @@
         <p id="auth-status" style="font-size: 13px; margin-top: 15px; color: #ef4444; font-weight: 600;"></p>
     </div>
 
-//--------------------------------------------
-//-----------Onboarding Class-----------------
-//--------------------------------------------
-
     <div id="onboarding-view" class="hidden" style="max-width: 500px; margin: 5vh auto; background: var(--surface); padding: 40px; border-radius: 12px; border: 1px solid var(--border);">
         <h2>Setup Your Workspace</h2>
         <div class="form-group"><label>Full Name</label><input type="text" id="ob-name"></div>
@@ -117,9 +113,6 @@
         <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
     </div>
 
-//--------------------------------------------
-//------------Admin View----------------------
-//--------------------------------------------
     <div id="admin-view" class="hidden">
         <div class="sidebar">
             <div class="brand-logo">ProPM</div>
@@ -138,9 +131,6 @@
             </div>
         </div>
 
-//--------------------------------------------
-//--------------View Container----------------
-//--------------------------------------------
         <div class="view-container">
             <div class="top-quick-access">
                 <button class="quick-btn" onclick="navTo('sub8')" style="position: relative;">
@@ -192,9 +182,7 @@
                             </tr></thead><tbody id="tasks-table-body"></tbody></table>
                 </div>
 
-//--------------------------------------------
-//-----------------Sub Page Hidden------------
-//--------------------------------------------
+
                 <div id="sub3" class="sub-page hidden">
                     <h3>Workspace Teams</h3>
                     <div class="form-row">
@@ -214,9 +202,6 @@
                             </tr></thead><tbody id="team-table-body"></tbody></table>
                 </div>
 
-		//----------------------------------------------
-		//------------Sub Class 4 CSS -------------------
-		//----------------------------------------------
                 <div id="sub4" class="sub-page hidden">
                     <h3>Add Team Members</h3>
                     <div class="form-row">
@@ -235,9 +220,6 @@
                     <table><thead><tr><th>Name</th><th>Team</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead><tbody id="member-table-body"></tbody></table>
                 </div>
 
-		//----------------------------------------------
-		//--------------sub page 5 CSS------------------
-		//----------------------------------------------
                 <div id="sub5" class="sub-page hidden">
                     <h3>Assign Project Tasks</h3>
                     <select id="assign-project-select" onchange="loadAssignmentTable()" style="max-width: 400px; margin-bottom: 20px;"></select>
@@ -248,9 +230,7 @@
                     <h3 style="margin-top: 40px;">Current Allocation Summary</h3>
                     <table><thead><tr><th>Task</th><th>Team</th><th>Assigned To</th><th>Status Overwrite</th></tr></thead><tbody id="allocation-summary-body"></tbody></table>
                 </div>
-		//----------------------------------------------
-		//------------Sub page 6 CSS -------------------
-		//----------------------------------------------
+
                 <div id="sub6" class="sub-page hidden">
                     <h3>Workspace Analytics</h3>
                     <div style="display: flex; gap: 20px; margin-bottom: 30px;">
@@ -270,9 +250,6 @@
                     <table><thead><tr><th>Team Name</th><th>Total Tasks</th><th style="color: #64748b;">To-Do</th><th style="color: #2563eb;">WIP</th><th style="color: #10b981;">Completed</th></tr></thead><tbody id="analytics-team-body"></tbody></table>
                 </div>
 
-		//----------------------------------------------
-		//-------------SUb Page 7 CSS-------------------
-		//----------------------------------------------
 
                 <div id="sub7" class="sub-page hidden">
                     <div class="settings-header">
@@ -581,7 +558,7 @@
             snap.forEach(d => dd.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
         };
         
-        window.saveTask = async () => {
+        window.window.saveTask = async () => {
             const pid = document.getElementById('t-project-id').value;
             const tdesc = document.getElementById('t-desc').value.trim();
             const tdetails = document.getElementById('t-details').value.trim();
@@ -595,7 +572,9 @@
             loadTasksTable();
         };
 
-	window.loadTasksTable = async () => {
+        // --- THE MISSING LINE WAS ADDED BELOW ---
+        window.loadTasksTable = async () => { 
+
             const [pSnap, tSnap] = await Promise.all([getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email))), getDocs(collection(db, "tasks"))]);
             const tbody = document.getElementById('tasks-table-body'); tbody.innerHTML = '';
             
