@@ -113,23 +113,29 @@
         <button onclick="completeOnboarding()" style="width: 100%; padding: 12px;">Complete Setup & Enter Console</button>
     </div>
 
-    <div id="admin-view" class="hidden">
-        <div class="sidebar">
-            <div class="brand-logo">ProPM</div>
-            <button class="sidebar-btn active" onclick="navTo('sub1')">1. Create Project</button>
-            <button class="sidebar-btn" onclick="navTo('sub2')">2. Create Tasks</button>
-            <button class="sidebar-btn" onclick="navTo('sub3')">3. Add Teams</button>
-            <button class="sidebar-btn" onclick="navTo('sub4')">4. Add Members</button>
-            <button class="sidebar-btn" onclick="navTo('sub5')">5. Assign Project</button>
-            <button class="sidebar-btn" onclick="navTo('sub6')">6. Analytics</button>
-            <div style="flex: 1;"></div>
-            <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
-                <div class="org-badge" id="display-org-name">Organization</div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 5px;">Logged in as</div>
-                <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">Admin Name</div>
-                <div class="role-pill">ADMIN</div>
-            </div>
+   <div id="admin-view" class="hidden">
+    <div class="sidebar">
+        <div class="brand-logo">ProPM</div>
+        <button class="sidebar-btn active" onclick="navTo('sub1')">1. Create Project</button>
+
+        <!-- <button class="sidebar-btn" onclick="navTo('sub2')">2. Create Tasks</button> -->
+
+        <button class="sidebar-btn" onclick="navTo('sub3')">2. Add Teams</button>
+
+        <!-- <button class="sidebar-btn" onclick="navTo('sub4')">4. Add Members</button> -->
+
+        <button class="sidebar-btn" onclick="navTo('sub5')">3. Assign Project</button>
+        <button class="sidebar-btn" onclick="navTo('sub6')">4. Analytics</button>
+
+        <div style="flex: 1;"></div>
+        <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
+            <div class="org-badge" id="display-org-name">Organization</div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">Logged in as</div>
+            <div class="user-name" style="font-weight: 700; color: var(--text); font-size: 14px;">Admin Name</div>
+            <div class="role-pill">ADMIN</div>
         </div>
+    </div>
+</div>
 
         <div class="view-container">
             <div class="top-quick-access">
@@ -162,8 +168,9 @@
                     </table>
                 </div>
 
-                <div id="sub2" class="sub-page hidden">
-                    <h3>Create Project Tasks</h3>
+	<div id="sub2" class="sub-page hidden">
+        		<button class="outline" onclick="navTo('sub1')" style="margin-bottom: 15px; padding: 5px 10px; font-size: 12px;">⬅ Back to Projects</button>
+        		<h3>Create Project Tasks</h3>
                     <div class="form-row">
                         <div class="form-group"><label>Select Project</label><select id="t-project-id"></select></div>
                         <div class="form-group" style="flex: 2;"><label>Task Name</label><input type="text" id="t-desc"></div>
@@ -202,8 +209,9 @@
                             </tr></thead><tbody id="team-table-body"></tbody></table>
                 </div>
 
-                <div id="sub4" class="sub-page hidden">
-                    <h3>Add Team Members</h3>
+               <div id="sub4" class="sub-page hidden">
+       		 <button class="outline" onclick="navTo('sub3')" style="margin-bottom: 15px; padding: 5px 10px; font-size: 12px;">⬅ Back to Teams</button>
+		 <h3>Add Team Members</h3>
                     <div class="form-row">
                         <div class="form-group"><label>Name</label><input type="text" id="m-name"></div>
                         <div class="form-group"><label>Email</label><input type="email" id="m-email"></div>
@@ -536,10 +544,20 @@
             snap.forEach(d => {
                 const p = d.data();
                 tbody.innerHTML += `<tr>
-                    <td>${p.name}</td><td>${p.endDate}</td><td>${p.description || 'No description provided.'}</td>
-                    <td class="action-btns"><button onclick="editProject('${d.id}')">Edit</button><button class="danger" onclick="deleteProject('${d.id}')">Del</button></td>
+                    <td>${p.name}</td><td>${p.endDate}</td><td>${p.description || 'N/A'}</td>
+                    <td class="action-btns">
+                        <button class="outline" onclick="openTaskEntry('${d.id}')">+ Tasks</button>
+                        <button onclick="editProject('${d.id}')">Edit</button>
+                        <button class="danger" onclick="deleteProject('${d.id}')">Del</button>
+                    </td>
                 </tr>`;
             });
+        };
+
+        // NEW HELPER: Auto-selects project and moves to Task Entry
+        window.openTaskEntry = (pid) => {
+            navTo('sub2');
+            setTimeout(() => { document.getElementById('t-project-id').value = pid; }, 500);
         };
         
         window.editProject = async (id) => {
@@ -644,34 +662,51 @@
        
 window.loadTeamsTable = async () => {
             const adminEmail = auth.currentUser.email;
-            
-            // Fetch both teams AND members at the same time for efficiency
             const [teamsSnap, membersSnap] = await Promise.all([
                 getDocs(query(collection(db, "teams"), where("createdBy", "==", adminEmail))),
                 getDocs(query(collection(db, "users"), where("adminEmail", "==", adminEmail)))
             ]);
             
-            const tbody = document.getElementById('team-table-body'); 
-            tbody.innerHTML = '';
+            const tbody = document.getElementById('team-table-body'); tbody.innerHTML = '';
             
             teamsSnap.forEach(d => {
-                // Count how many members share this specific team's ID
-                const memberCount = membersSnap.docs.filter(m => m.data().teamId === d.id).length;
+                const teamMembers = membersSnap.docs.filter(m => m.data().teamId === d.id);
                 
-                tbody.innerHTML += `<tr>
-                    <td style="vertical-align: middle; font-weight: 500;">${d.data().name}</td>
-                    <td style="text-align: center; vertical-align: middle; font-weight: 600; color: #64748b;">${memberCount} / 10</td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button class="outline" onclick="navTo('sub4')" style="width: 100%; padding: 8px;">+ Members</button>
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button onclick="editTeam('${d.id}')" style="width: 100%; padding: 8px;">Edit</button>
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button class="danger" onclick="deleteTeam('${d.id}')" style="width: 100%; padding: 8px;">Del</button>
+                // Build the inner Directory table
+                let memberRows = teamMembers.length === 0 
+                    ? `<tr><td colspan="3" style="text-align:center; color:#64748b;">No members in this team.</td></tr>`
+                    : teamMembers.map(m => `<tr><td>${m.data().name}</td><td>${m.id}</td><td>${m.data().phone || 'N/A'}</td></tr>`).join('');
+
+                tbody.innerHTML += `
+                <tr>
+                    <td><button class="expand-btn" onclick="toggleTeamRow('${d.id}', event)">▶</button> ${d.data().name}</td>
+                    <td style="text-align: center; font-weight: 600;">${teamMembers.length} / 10</td>
+                    <td><button class="outline" onclick="openMemberEntry('${d.id}')" style="width:100%">+ Members</button></td>
+                    <td><button onclick="editTeam('${d.id}')" style="width:100%">Edit</button></td>
+                    <td><button class="danger" onclick="deleteTeam('${d.id}')" style="width:100%">Del</button></td>
+                </tr>
+                <tr id="team-dir-${d.id}" style="display:none; background: var(--bg);">
+                    <td colspan="5" style="padding:0; border-bottom: 2px solid var(--primary);">
+                        <table style="width:100%; margin:0; box-shadow:none;">
+                            <thead style="background:rgba(0,0,0,0.02);">
+                                <tr><th>Member Name</th><th>Email</th><th>Phone</th></tr>
+                            </thead>
+                            <tbody>${memberRows}</tbody>
+                        </table>
                     </td>
                 </tr>`;
             });
+        };
+
+        window.toggleTeamRow = (id, e) => {
+            const row = document.getElementById(`team-dir-${id}`);
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+            e.target.innerText = row.style.display === 'none' ? '▶' : '▼';
+        };
+
+        window.openMemberEntry = (tid) => {
+            navTo('sub4');
+            setTimeout(() => { document.getElementById('m-team-id').value = tid; }, 500);
         };
 
         window.editTeam = async (id) => { 
