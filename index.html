@@ -1003,31 +1003,42 @@ window.assignSpecificTask = async (tid) => {
         const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
         if (!member) return alert("System Error: Member data mapping failed.");
 
+        // 1. Update the Task Status
         await updateDoc(doc(db, "tasks", tid), {
             assignedToEmail: email, assignedToName: member.name, 
             status: 'assigned', targetDate: targetDate, assignedTimestamp: Date.now()
         });
 
-	const assignedSnap = await getDocs(query(collection(db, "tasks"), 	where("adminEmail", "==", auth.currentUser.email), where("status", "==", "assigned")));
-	if (assignedSnap.size === 1) { // This is their first ever assignment
-	    logEvent(analytics, 'ttv_first_assignment', {
-        	seconds_since_signup: Math.floor((Date.now() - auth.currentUser.metadata.createdAt) / 1000)
-	    });
-	    setUserProperties(analytics, { user_cohort: 'power_user' });
-	}
-	logEvent(analytics, 'task_assigned');
+        // 2. THE RESTORED NOTIFICATION LOGIC
+        try {
+            await addDoc(collection(db, "notifications"), {
+                forEmail: email,
+                fromEmail: auth.currentUser.email,
+                message: `New task assigned. Target Date: ${targetDate}.`,
+                timestamp: Date.now(),
+                read: false,
+                bookmarked: false
+            });
+        } catch (notifErr) {
+            console.error("Failed to send notification: ", notifErr);
+        }
 
-        // LOG SUCCESS HERE
-        
+        // 3. Cleaned-Up Analytics Tracking
+        const assignedSnap = await getDocs(query(collection(db, "tasks"), where("adminEmail", "==", auth.currentUser.email), where("status", "==", "assigned")));
+        if (assignedSnap.size === 1) { // First ever assignment
+            logEvent(analytics, 'ttv_first_assignment', {
+                seconds_since_signup: Math.floor((Date.now() - auth.currentUser.metadata.createdAt) / 1000)
+            });
+            setUserProperties(analytics, { user_cohort: 'power_user' });
+        }
+        logEvent(analytics, 'task_assigned');
+
         alert("Task assigned with Target Date!!");
-	logEvent(analytics, 'first_task_assigned');
-        setUserProperties(analytics, { user_cohort: 'power_user' });        
-	loadAssignmentTable();
+        loadAssignmentTable();
     } catch (error) {
         alert("Assignment failed: " + error.message);
     }
 };
-
         window.runAnalytics = async () => {
             const user = auth.currentUser;
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
