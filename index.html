@@ -898,7 +898,7 @@ window.loadTeamsTable = async () => {
 
 	window.lastSelectedProjectId = "";
 
-       => {
+      window.loadAssignProjectDropdown = async () => {
             const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email)));
             const dd = document.getElementById('assign-project-select'); 
             dd.innerHTML = '<option value="">-- Select Project --</option>';
