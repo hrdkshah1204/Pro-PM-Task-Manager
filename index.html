@@ -761,6 +761,38 @@ window.loadProjectsTable = async () => {
                 alert("Team save failed. Please check your connection.");
             }
         };
+window.loadTeamsTable = async () => {
+            const adminEmail = auth.currentUser.email;
+            
+            // Fetch both teams AND members at the same time for efficiency
+            const [teamsSnap, membersSnap] = await Promise.all([
+                getDocs(query(collection(db, "teams"), where("createdBy", "==", adminEmail))),
+                getDocs(query(collection(db, "users"), where("adminEmail", "==", adminEmail)))
+            ]);
+            
+            const tbody = document.getElementById('team-table-body'); 
+            tbody.innerHTML = '';
+            
+            teamsSnap.forEach(d => {
+                // Count how many members share this specific team's ID
+                const memberCount = membersSnap.docs.filter(m => m.data().teamId === d.id).length;
+                
+                tbody.innerHTML += `<tr>
+                    <td style="vertical-align: middle; font-weight: 500;">${d.data().name}</td>
+                    <td style="text-align: center; vertical-align: middle; font-weight: 600; color: #64748b;">${memberCount} / 10</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button class="outline" onclick="navTo('sub4')" style="width: 100%; padding: 8px;">+ Members</button>
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button onclick="editTeam('${d.id}')" style="width: 100%; padding: 8px;">Edit</button>
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button class="danger" onclick="deleteTeam('${d.id}')" style="width: 100%; padding: 8px;">Del</button>
+                    </td>
+                </tr>`;
+            });
+        };
+
 
         window.editTeam = async (id) => { 
             const d = await getDoc(doc(db, "teams", id)); 
@@ -866,7 +898,7 @@ window.loadProjectsTable = async () => {
 
 	window.lastSelectedProjectId = "";
 
-       window.loadAssignProjectDropdown = async () => {
+       => {
             const snap = await getDocs(query(collection(db, "projects"), where("createdBy", "==", auth.currentUser.email)));
             const dd = document.getElementById('assign-project-select'); 
             dd.innerHTML = '<option value="">-- Select Project --</option>';
@@ -1355,4 +1387,3 @@ window.assignSpecificTask = async (tid) => {
     </script>
 </body>
 </html>
-
