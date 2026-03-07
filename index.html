@@ -991,54 +991,42 @@ window.loadTeamsTable = async () => {
         
         
 window.assignSpecificTask = async (tid) => {
-    try {
-        const email = document.getElementById(`m-${tid}`).value;
-        const tId = document.getElementById(`t-${tid}`).value;
-        const targetDate = document.getElementById(`date-${tid}`).value;
+            try {
+                const email = document.getElementById(`m-${tid}`).value;
+                const tId = document.getElementById(`t-${tid}`).value;
+                const targetDate = document.getElementById(`date-${tid}`).value;
+                
+                if (!tId) return alert("Please select a Team first.");
+                if (!email || email === "undefined") return alert("Please select a Member from the team dropdown.");
+                if (!targetDate) return alert("Please set a Target Date for completion.");
 
-        if (!tId) return alert("Please select a Team first.");
-        if (!email || email === "undefined") return alert("Please select a Member.");
-        if (!targetDate) return alert("Please set a Target Date.");
+                const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
+                if (!member) return alert("System Error: Member data mapping failed.");
 
-        const member = window.workspaceMembers.find(m => m.email === email || m.id === email);
-        if (!member) return alert("System Error: Member data mapping failed.");
+                const adminName = document.querySelector('.user-name').innerText;
+                const teamSelect = document.getElementById(`t-${tid}`);
+                const teamName = teamSelect.options[teamSelect.selectedIndex].text;
+                const assignedAtDate = new Date().toISOString().split('T')[0];
 
-        // 1. Update the Task Status
-        await updateDoc(doc(db, "tasks", tid), {
-            assignedToEmail: email, assignedToName: member.name, 
-            status: 'assigned', targetDate: targetDate, assignedTimestamp: Date.now()
-        });
+                await updateDoc(doc(db, "tasks", tid), { 
+                    assignedToEmail: email, assignedToName: member.name, assignedTeamId: tId, 
+                    assignedTeamName: teamName, assignedByName: adminName, status: 'assigned',
+                    targetDate: targetDate, assignedAt: assignedAtDate, assignedTimestamp: Date.now()
+                });
 
-        // 2. THE RESTORED NOTIFICATION LOGIC
-        try {
-            await addDoc(collection(db, "notifications"), {
-                forEmail: email,
-                fromEmail: auth.currentUser.email,
-                message: `New task assigned. Target Date: ${targetDate}.`,
-                timestamp: Date.now(),
-                read: false,
-                bookmarked: false
-            });
-        } catch (notifErr) {
-            console.error("Failed to send notification: ", notifErr);
-        }
+                try {
+                    await addDoc(collection(db, "notifications"), { forEmail: email, fromEmail: auth.currentUser.email, message: `New task assigned: Target Date ${targetDate}.`, timestamp: Date.now(), read: false, bookmarked: false });
+                } catch(ne) {}
 
-        // 3. Cleaned-Up Analytics Tracking
-        const assignedSnap = await getDocs(query(collection(db, "tasks"), where("adminEmail", "==", auth.currentUser.email), where("status", "==", "assigned")));
-        if (assignedSnap.size === 1) { // First ever assignment
-            logEvent(analytics, 'ttv_first_assignment', {
-                seconds_since_signup: Math.floor((Date.now() - auth.currentUser.metadata.createdAt) / 1000)
-            });
-            setUserProperties(analytics, { user_cohort: 'power_user' });
-        }
-        logEvent(analytics, 'task_assigned');
+                alert("Task assigned with Target Date!");
+                loadAssignmentTable();
+            } catch (error) {
+                alert("Assignment failed: " + error.message);
+            }
+        };
 
-        alert("Task assigned with Target Date!!");
-        loadAssignmentTable();
-    } catch (error) {
-        alert("Assignment failed: " + error.message);
-    }
-};
+window.manualStatusUpdate = async (tid, s) => await updateDoc(doc(db, "tasks", tid), { status: s });
+
         window.runAnalytics = async () => {
             const user = auth.currentUser;
             const [pSnap, tSnap, teamSnap, mSnap] = await Promise.all([
