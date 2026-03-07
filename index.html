@@ -279,9 +279,10 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>Company Name</label><input id="set-company" disabled></div>
+
                             <div class="form-group">
                                 <label>Team Size</label>
-                                <select id="set-size">
+                                <select id="set-size" disabled>
                                     <option value="1 - 10">1 - 10</option>
                                     <option value="11 - 50">11 - 50</option>
                                     <option value="51 - 150">51 - 150</option>
@@ -289,8 +290,9 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group"><label>Company Address</label><textarea id="set-address" rows="3"></textarea></div>
-                        <button onclick="updateAdminProfile()" style="margin-top:20px">Update Workspace Details</button>
+                        <div class="form-group"><label>Company Address</label><textarea id="set-address" rows="3" disabled></textarea></div>
+                        <button id="btn-edit-admin" onclick="toggleAdminEdit()" style="margin-top:20px">Edit Details</button>
+
                         <hr style="margin: 30px 0; border: 0; border-top: 1px solid var(--border);">
                         <h4>Personalization</h4>
                         <div style="display: flex; gap: 15px; margin-top: 15px;">
@@ -472,11 +474,20 @@
                 if (userSnap.exists()) {
                     const data = userSnap.data();
                     document.getElementById('login-view').classList.add('hidden');
-                    if (data.role === 'admin' && data.onboardingComplete) {
+
+		if (data.role === 'admin' && data.onboardingComplete) {
                         document.getElementById('admin-view').classList.remove('hidden');
                         document.getElementById('display-org-name').innerText = data.company || "Workspace";
                         document.querySelectorAll('.user-name').forEach(el => el.innerText = data.name);
-                        // ... (rest of your profile population code) ...
+                        
+                        // --- NEW: POPULATE ADMIN SETTINGS ON LOGIN ---
+                        document.getElementById('set-name').value = data.name || "";
+                        document.getElementById('set-email').value = user.email || ""; // Captures the Google Email
+                        document.getElementById('set-phone').value = data.phone || "";
+                        document.getElementById('set-company').value = data.company || "";
+                        document.getElementById('set-size').value = data.teamSize || "1 - 10";
+                        document.getElementById('set-address').value = data.companyAddress || "";
+                        
                         loadAdminNotifications();
                         navTo('sub1');
                     } else if (data.role === 'member') {
@@ -1061,7 +1072,45 @@ window.manualStatusUpdate = async (tid, s) => await updateDoc(doc(db, "tasks", t
             });
         };
 
-        window.updateAdminProfile = async () => await updateDoc(doc(db, "users", auth.currentUser.email), { companyAddress: document.getElementById('set-address').value, teamSize: document.getElementById('set-size').value });
+       window.toggleAdminEdit = async () => {
+            const btn = document.getElementById('btn-edit-admin');
+            const fieldsToToggle = ['set-name', 'set-phone', 'set-company', 'set-size', 'set-address'];
+            
+            if (btn.innerText === "Edit Details") {
+                // UNLOCK MODE
+                fieldsToToggle.forEach(id => document.getElementById(id).disabled = false);
+                btn.innerText = "Update Details";
+            } else {
+                // SAVE MODE
+                const newName = document.getElementById('set-name').value.trim();
+                const newPhone = document.getElementById('set-phone').value.trim();
+                const newCompany = document.getElementById('set-company').value.trim();
+                const newSize = document.getElementById('set-size').value;
+                const newAddress = document.getElementById('set-address').value.trim();
+
+                try {
+                    await updateDoc(doc(db, "users", auth.currentUser.email), { 
+                        name: newName,
+                        phone: newPhone,
+                        company: newCompany,
+                        teamSize: newSize,
+                        companyAddress: newAddress
+                    });
+                    
+                    // Instantly update the sidebar UI so the admin sees the change
+                    document.getElementById('display-org-name').innerText = newCompany || "Workspace";
+                    document.querySelectorAll('.user-name').forEach(el => el.innerText = newName);
+
+                    alert("Workspace Details Updated Successfully!");
+                    
+                    // LOCK FIELDS AGAIN
+                    fieldsToToggle.forEach(id => document.getElementById(id).disabled = true);
+                    btn.innerText = "Edit Details";
+                } catch (e) {
+                    alert("Failed to update profile: " + e.message);
+                }
+            }
+        };
 
         function loadAdminNotifications() {
             onSnapshot(query(collection(db, "notifications"), where("forEmail", "==", auth.currentUser.email)), (snap) => {
